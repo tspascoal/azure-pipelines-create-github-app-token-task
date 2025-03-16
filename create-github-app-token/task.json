@@ -1,0 +1,106 @@
+{
+    "$schema": "https://raw.githubusercontent.com/Microsoft/azure-pipelines-task-lib/master/tasks.schema.json",
+    "id": "eec4a84e-1410-4f7a-81a6-e19e2b45b047",
+    "name": "create-github-app-token",
+    "friendlyName": "Create GitHub App Installation Token",
+    "description": "Generates a GitHub App installation token for authentication",
+    "helpMarkDown": "Use this task to generate a GitHub App installation token for API authentication",
+    "category": "Utility",
+    "author": "Tiago Pascoal",
+    "version": {
+        "Major": 1,
+        "Minor": 0,
+        "Patch": 0
+    },
+    "instanceNameFormat": "Create GitHub App Installation Token",
+    "inputs": [
+        {
+            "name": "githubAppConnection",
+            "type": "connectedService:githubappauthentication",
+            "label": "GitHub App Connection",
+            "defaultValue": "",
+            "required": false,
+            "helpMarkDown": "The GitHub App connection to use. If not set, the other inputs will be used instead. This is the preferred way to use this task.",
+        },
+        {
+            "name": "owner",
+            "type": "string",
+            "label": "Owner Name (organization or user)",
+            "defaultValue": "",
+            "required": true,
+            "helpMarkDown": "The GitHub organization or user name where the app is installed"
+        },
+        {
+            "name": "accountType",
+            "type": "string",
+            "label": "Account Type",
+            "defaultValue": "org",
+            "required": false,
+            "helpMarkDown": "The type of account to use. Can be either 'organization' or 'user'. (required if repositories is not set)",
+            "options": {
+                "org": "organization account",
+                "user": "user account"
+            }
+        },
+        {
+            "name": "repositories",
+            "label": "Repositories (optional)",
+            "type": "string",
+            "defaultValue": "",
+            "required": false,
+            "helpMarkDown": "The GitHub repository(ies) to scope the token to. If empty it will be scoped to the organization. CSV"
+        },
+        {
+            "name": "certificateFile",
+            "defaultValue": "",
+            "type": "string",
+            "label": "GitHub App PEM certificate filename",
+            "required": false,
+            "helpMarkDown": "The PEM certificate"
+        }, 
+        {
+            "name": "certificate",
+            "defaultValue": "",
+            "type": "string",
+            "label": "GitHub App PEM certificate",
+            "required": false,
+            "helpMarkDown": "The PEM certificate"
+        }, 
+        {
+            "name": "appClientId",
+            "type": "string",
+            "label": "GitHub App Client ID",
+            "defaultValue": "",
+            "required": false,
+            "helpMarkDown": "The GitHub App ID (found in the app settings)"
+        },
+        {
+            "name": "skipTokenRevoke",
+            "type": "boolean",
+            "label": "Skip Token Revocation",
+            "defaultValue": "false",
+            "required": false,
+            "helpMarkDown": "If true, the token will not be automatically revoked at the end of the job. Set to false to revoke the token."
+        }
+    ],
+    "outputVariables": [
+        {
+            "name": "installationToken",
+            "description": "The GitHub App Installation token"
+        },
+        {
+            "name": "installationId",
+            "description": "The ID of the GitHub App installation"
+        }
+    ],
+    "execution": {
+        "Node20_1": {
+            "target": "lib/run/index.js"
+        }
+    },
+    "postjobexecution": {
+        "Node20_1": {
+            "target": "lib/post/index.js"
+        }
+    }
+}

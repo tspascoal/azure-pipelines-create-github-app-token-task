@@ -1,0 +1,30 @@
+{
+  "name": "create-github-app-token",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf ./dist ./lib",
+    "prebuild": "npm run clean",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "package": "npm run build && ncc build dist/src/tasks/run.js -o lib/run && ncc build dist/src/tasks/post.js -o lib/post"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "axios": "^1.6.2",
+    "azure-pipelines-task-lib": "^5.0.0",
+    "http-proxy-agent": "^5.0.0",
+    "https-proxy-agent": "^5.0.0",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/node": "^18.*",
+    "@types/q": "^1.5.8",
+    "@vercel/ncc": "^0.38.3",
+    "typescript": "^5.8.2"
+  }
+}

@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+      
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: create-github-app-token/package-lock.json
+
+    - name: Install dependencies
+      run: npm ci
+      working-directory: create-github-app-token
+
+    - name: Build
+      run: npm run build
+      working-directory: create-github-app-token
+
+    - name: Package
+      run: npm run package
+      working-directory: create-github-app-token
+
+    - name: Install tfx-cli
+      run: npm install -g tfx-cli
+    
+    - name: Create Package
+      run: tfx extension create --manifest-globs vss-extension.json
+
+    - name: Upload Package to Artifacts
+      if: github.event_name == 'push'
+      uses: actions/upload-artifact@v4
+      with:
+        name: extension
+        path: '*.vsix'

@@ -1,0 +1,114 @@
+{
+    "manifestVersion": 1,
+    "id": "create-github-app-token",
+    "name": "GitHub App Token Generator",
+    "version": "1.0.0",
+    "publisher": "INTSERT YOUR PUBLISHER HERE",
+    "public": false,
+    "targets": [
+        {
+            "id": "Microsoft.VisualStudio.Services"
+        }
+    ],
+    "description": "Azure Pipelines task to generate GitHub App installation tokens.",
+    "categories": [
+        "Azure Pipelines"
+    ],
+    "icons": {
+        "default": "images/icon-app.png"
+    },
+    "files": [
+        {
+            "path": "images/icon-app.png",
+            "addressable": true
+        },
+        {
+            "path": "create-github-app-token/task.json"
+        },
+        {
+            "path": "create-github-app-token/lib"
+        }
+    ],    
+    "contributions": [
+        {
+            "id": "custom-build-release-task",
+            "type": "ms.vss-distributed-task.task",
+            "targets": [
+                "ms.vss-distributed-task.tasks"
+            ],
+            "properties": {
+                "name": "create-github-app-token"
+            }
+        },
+        {
+            "id": "github-app-service-endpoint-type",
+            "description": "GitHub App Service Connection",
+            "type": "ms.vss-endpoint.service-endpoint-type",
+            "targets": [
+                "ms.vss-endpoint.endpoint-types"
+            ],
+            "datasource": [],
+            "properties": {
+                "name": "githubappauthentication",
+                "isVerifiable": false,
+                "displayName": "GitHub App",
+                "url": {
+                    "value": "https://api.github.com/",
+                    "displayName": "GitHub API URL",
+                    "isVisible": "true"
+                },
+                "icon": "images/icon-app.png",
+                "authenticationSchemes": [
+                    {
+                        "type": "ms.vss-endpoint.endpoint-auth-scheme-cert",
+                        "inputDescriptors": [
+                            {
+                                "id": "appClientId",
+                                "name": "GitHub Client ID",
+                                "description": "The GitHub App Client ID",
+                                "inputMode": "textbox",
+                                "isConfidential": false,
+                                "validation": {
+                                    "isRequired": true,
+                                    "dataType": "string"
+                                }
+                            },
+                            {
+                                "id": "certificate",
+                                "name": "Private Key (PEM)",
+                                "description": "The private key in PEM format from your GitHub App",
+                                "inputMode": "textarea",
+                                "isConfidential": true,
+                                "validation": {
+                                    "isRequired": true,
+                                    "dataType": "string"
+                                }
+                            },
+                            {
+                                "id": "forceRepoScope",
+                                "name": "Scope to current repository",
+                                "description": "If true, the token will be scoped to the current repository (only works for GitHub repositories. Will faild if set to true and repository is not a GitHub repository)",
+                                "inputMode": "checkbox",
+                                "isConfidential": false,
+                                "validation": {
+                                    "isRequired": false,
+                                    "dataType": "boolean"
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    ],
+    "content": {
+        "details": {
+            "path": "README.md"
+        }
+    },
+    "tags": [
+        "GitHub",
+        "Authentication",
+        "GitHub App"
+    ]
+}
