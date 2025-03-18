@@ -179,7 +179,11 @@ To package the Azure Pipelines extension, you'll need to use the Cross-platform 
 
 For comprehensive guidance, refer to the [official Microsoft documentation on creating and publishing extensions](https://learn.microsoft.com/en-us/azure/devops/extend/develop/add-build-task?view=azure-devops). For publishing details, see the [extension publishing overview](https://learn.microsoft.com/en-us/azure/devops/extend/publish/overview?view=azure-devops) which covers the entire process from packaging through publishing to the Visual Studio Marketplace, including handling versioning, sharing with specific organizations, and managing extension updates.
 
-The CI Action packages the extension and uploads as a artifact, the extension is packages as `ENTER YOUR PUBLISHER HERE`, you can force your own publisher by setting a [GitHub Actions variables](https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/store-information-in-variables) called `PUBLISHER` with your publisher name.
+### Continuous Integration
+
+Both GitHub Actions as well as Azure Pipelines are provided to execute continuous integration. (they are triggered by either a pull request or a push against the `main` branch).
+
+The CI Action packages the extension and uploads it as an artifact, the extension is packaged as `ENTER YOUR PUBLISHER HERE` publisher. You should use your own publisher by setting a variable with the name `PUBLISHER` on the CI pipeline.
 
 ## Contributing
 

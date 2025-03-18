@@ -1,0 +1,66 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pr:
+  branches:
+    include:
+      - main
+
+# Define on the pipeline a PUBLISHER variable with the value of your publisher
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+- task: NodeTool@0
+  inputs:
+    versionSpec: '20.x'
+  displayName: 'Setup Node.js'
+
+- script: npm ci
+  displayName: 'Install dependencies'
+  workingDirectory: create-github-app-token
+
+- script: |
+    npm run clean
+    npm run build
+  displayName: 'Build'
+  workingDirectory: create-github-app-token
+
+- script: npm run package
+  displayName: 'Package'
+  workingDirectory: create-github-app-token
+
+- script: npm install -g tfx-cli
+  displayName: 'Install tfx-cli'
+
+- script: |
+    # set default value if not set 
+    if [ -z "$(PUBLISHER)" ]; then
+      PUBLISHER="ENTER YOUR PUBLISHER HERE"
+      echo "##warning: PUBLISHER is not set, using default value: $PUBLISHER"
+    fi
+
+    echo "publisher ${PUBLISHER}"
+
+    tfx extension create \
+    --manifest-globs vss-extension.json \
+    --no-prompt \
+    --publisher "${PUBLISHER}"
+  displayName: 'Create Extension Package'
+
+- bash: |
+    ls -al $(System.DefaultWorkingDirectory)
+    ls -l $(System.DefaultWorkingDirectory)/*.vsix
+    cp "$(System.DefaultWorkingDirectory)"/*.vsix "$(Build.ArtifactStagingDirectory)"
+  displayName: copy extension to staging directory
+    
+- task: PublishPipelineArtifact@1
+  inputs:
+    targetPath: '$(Build.ArtifactStagingDirectory)'
+    artifact: 'extension'
+    publishLocation: 'pipeline'
+  displayName: 'Upload Package to Artifacts'
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
