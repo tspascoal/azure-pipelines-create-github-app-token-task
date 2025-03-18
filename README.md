@@ -1,6 +1,7 @@
 # GitHub App Token Generator for Azure Pipelines
 
-This Azure Pipelines task generates GitHub App installation tokens that can be used for authenticating with GitHub APIs. It's particularly useful when you need to interact with GitHub repositories using a GitHub App instead of personal access tokens or other authentication methods.
+
+Azure Pipelines extension to create a GitHub App installation tokens that can be used for calling GitHub APIs. It's particularly useful when you need to interact with GitHub repositories using a GitHub App instead of personal access tokens or other authentication methods. The extension include a task that generates GitHub App installation tokens for API authentication and a service connection definition that allows you to save the GitHub App data and credentials securely in Azure DevOps.
 
 > [!NOTE]
 > This is a (fully functional) sample and the extension is not published in the [marketplace](https://marketplace.visualstudio.com). If you want to use it, you need to publish. You can find the instructions [here](https://learn.microsoft.com/en-us/azure/devops/extend/publish/overview).
