@@ -3,7 +3,7 @@
     "id": "create-github-app-token",
     "name": "GitHub App Token Generator",
     "version": "1.0.0",
-    "publisher": "INTSERT YOUR PUBLISHER HERE",
+    "publisher": "INSERT YOUR PUBLISHER HERE",
     "public": false,
     "targets": [
         {

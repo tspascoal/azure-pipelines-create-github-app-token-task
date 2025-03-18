@@ -7,14 +7,14 @@ on:
     branches: [ main ]
 
 permissions: {}
-
+  
 jobs:
   build:
     runs-on: ubuntu-latest
 
     permissions:
       contents: read
-
+     
     steps:
     - uses: actions/checkout@v4
 
@@ -40,8 +40,14 @@ jobs:
     - name: Install tfx-cli
       run: npm install -g tfx-cli
     
-    - name: Create Package
-      run: tfx extension create --manifest-globs vss-extension.json
+    - name: Create Extension Package
+      run: |
+        tfx extension create \
+        --manifest-globs vss-extension.json \
+        --no-prompt \
+        --publisher ${PUBLISHER}
+      env: 
+        PUBLISHER: ${{ vars.PUBLISHER || 'ENTER YOUR PUBLISHER HERE' }}
 
     - name: Upload Package to Artifacts
       if: github.event_name == 'push'

@@ -79,7 +79,7 @@ steps:
 | $(installationToken) | The generated GitHub App installation token |
 | $(installationId) | The ID of the GitHub App installation |
 
-### Service Connection Setup
+### Service Connection Setup (optional)
 
 1. In your Azure DevOps project, go to Project Settings
 2. Select "Service connections" under Pipelines
@@ -171,6 +171,14 @@ Common issues and solutions:
 
 > [!TIP]
 > If you expand the task logs, you can see extra info like the token permissions and repo access. (If you run the pipeline in debug mode it will have extra info as well).
+
+## Packaging the Extension
+
+To package the Azure Pipelines extension, you'll need to use the Cross-platform CLI for Azure DevOps ([tfx-cli](https://www.npmjs.com/package/tfx-cli)). First, install the tfx-cli globally by running `npm install -g tfx-cli`. Once installed, navigate to your extension directory and run `tfx extension create --manifest-globs vss-extension.json --publisher YOURPUBLISHER` to generate a VSIX package file. Before packaging, ensure your manifest files (vss-extension.json and task.json) are properly configured with the correct version, (you can also set publisher ID, but the provided command overrides it), and other required metadata.
+
+For comprehensive guidance, refer to the [official Microsoft documentation on creating and publishing extensions](https://learn.microsoft.com/en-us/azure/devops/extend/develop/add-build-task?view=azure-devops). For publishing details, see the [extension publishing overview](https://learn.microsoft.com/en-us/azure/devops/extend/publish/overview?view=azure-devops) which covers the entire process from packaging through publishing to the Visual Studio Marketplace, including handling versioning, sharing with specific organizations, and managing extension updates.
+
+The CI Action packages the extension and uploads as a artifact, the extension is packages as `ENTER YOUR PUBLISHER HERE`, you can force your own publisher by setting a [GitHub Actions variables](https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/store-information-in-variables) called `PUBLISHER` with your publisher name.
 
 ## Contributing
 
