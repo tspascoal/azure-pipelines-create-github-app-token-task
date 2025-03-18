@@ -19,7 +19,7 @@ Azure Pipelines extension to create a GitHub App installation tokens that can be
 
 1. A GitHub App created and installed in your organization
 2. The GitHub App's private key (PEM format)
-3. The GitHub App ID
+3. The GitHub App client ID
 4. The GitHub App must be installed in the organization where you want to generate tokens
 
 ## Configuration
@@ -29,9 +29,9 @@ Azure Pipelines extension to create a GitHub App installation tokens that can be
 1. Go to your GitHub organization settings
 2. Navigate to GitHub Apps section
 3. Create a new GitHub App or select an existing one
-4. Note down the App ID
+4. Note down the App client ID
 5. Generate and download a private key (PEM format)
-6. Install the app in your organization
+6. Install the app in your organization(s)
 
 ### Task Configuration
 
@@ -93,6 +93,8 @@ steps:
      - **only** works if sources repository is GitHub. If you try to use with another source it will throw an error.
    - Optionally change the API URL if not using github.com
 5. Save the connection
+
+![Service Connection](docs/images/gh-app-service-connection.png)
 
 ## Examples
 
