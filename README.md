@@ -44,7 +44,7 @@ steps:
 - task: create-github-app-token@1
   inputs:
     githubAppConnection: 'MyGitHubAppConnection'
-    organization: 'your-org-name'
+    owner: 'your-org-name'
     repositories: 'repo1,repo2'  # Optional
 ```
 
@@ -54,7 +54,7 @@ steps:
 steps:
 - task: create-github-app-token@1
   inputs:
-    organization: 'your-org-name'
+    owner: 'your-org-name'
     appClientId: 'lv2313qqwqeqweqw'        # Your GitHub App ID
     certificate: '$(pem)'       # PEM content as variable
     repositories: 'repo1,repo2' # Optional
@@ -65,8 +65,8 @@ steps:
 | Parameter | Required | Description |
 |-----------|----------|-------------|
 | githubAppConnection | No | The GitHub App connection to use (preferred method) |
-| organization | Yes | The GitHub organization name where the app is installed |
-| repositories | No | Comma-separated list of repositories to scope the token to. If empty, token will be scoped to the entire organization |
+| owner | Yes | The GitHub organization name or user account where the app is installed |
+| repositories | No | Comma-separated list of repositories to scope the token to. If empty, token will be scoped to all repositories (in which the app has access to) |
 | appClientId | No* | The GitHub App ID (required if not using service connection) |
 | certificate | No* | The PEM certificate content (required if not using service connection) |
 | certificateFile | No | Alternative to certificate - filename containing the PEM content |
@@ -106,7 +106,7 @@ steps:
   name: token
   inputs:
     githubAppConnection: 'MyGitHubAppConnection'
-    organization: 'MyOrg'
+    owner: 'MyOrg'
 - bash: |
     gh api \
     --method POST -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" \
@@ -123,7 +123,7 @@ steps:
 steps:
 - task: create-github-app-token@1
   inputs:
-    organization: 'MyOrg'
+    owner: 'MyOrg'
     appClientId: 'lv2313qqwqeqweqw'
     certificate: '$(githubAppPem)'  # Variable containing PEM content
 ```
@@ -135,7 +135,7 @@ steps:
 - task: create-github-app-token@1
   inputs:
     githubAppConnection: 'MyGitHubAppConnection'
-    organization: 'MyOrg'
+    owner: 'MyOrg'
     repositories: 'repo1'
 ```
 
@@ -147,7 +147,7 @@ steps:
   name: githubAuth
   inputs:
     githubAppConnection: 'MyGitHubAppConnection'
-    organization: 'MyOrg'
+    owner: 'MyOrg'
     
 
 - script: |
