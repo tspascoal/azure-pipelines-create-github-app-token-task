@@ -70,6 +70,8 @@ steps:
 | appClientId | No* | The GitHub App ID (required if not using service connection) |
 | certificate | No* | The PEM certificate content (required if not using service connection) |
 | certificateFile | No | Alternative to certificate - filename containing the PEM content |
+| permissions | No | JSON object to restrict token permissions. Format: {"contents":"read","issues":"write",.....}. <br>Note: If permissions are set in the service connection, those will override any permissions specified here.<br> See permissions [Create an installation access token for an app](https://docs.github.com/en/rest/apps/apps?apiVersion=2022-11-28#create-an-installation-access-token-for-an-app) parameter  for full list of permissions |
+| skipTokenRevoke | No | If true, the token will not be automatically revoked at the end of the job |
 
 *Required if githubAppConnection is not specified
 
@@ -89,6 +91,9 @@ steps:
    - Connection name
    - GitHub App Client ID
    - Private Key (PEM content)
+   - Limit Token Permissions (optional) - JSON object defining permission restrictions for all tokens generated using this connection. Example: `{"contents":"read","issues":"write"}`. When set, this overrides any permissions specified in individual task instances.
+     > [!IMPORTANT]  
+     > Permissions can only be downgraded from what the GitHub App has. For example, if the GitHub App has "read" access to contents, you cannot request "write" access. Attempting to request higher permissions than what the GitHub App has will result in a failure to obtain the token.
    - Scope to repository. If this is set then the repositories input is ignored and the token will be scoped to the repository where the pipeline is running. For example this can be useful if install the on all or some repositories but you don't want the pipeline to access other repositories.
      - **only** works if sources repository is GitHub. If you try to use with another source it will throw an error.
    - Optionally change the API URL if not using github.com
@@ -117,7 +122,7 @@ steps:
     GH_TOKEN: $(token.installationToken)
 ```
 
-### Using Direct Certificate Input
+### Using Direct Certificate Input and restriction permissions
 
 ```yaml
 steps:
@@ -126,9 +131,10 @@ steps:
     owner: 'MyOrg'
     appClientId: 'lv2313qqwqeqweqw'
     certificate: '$(githubAppPem)'  # Variable containing PEM content
+    permissions: '{"contents":"read","pulls":"write","issues":"write"}'
 ```
 
-### Repository-Scoped Token
+### Repository-Scoped Token and restricted permissions
 
 ```yaml
 steps:
@@ -137,6 +143,13 @@ steps:
     githubAppConnection: 'MyGitHubAppConnection'
     owner: 'MyOrg'
     repositories: 'repo1'
+    permissions: |
+      {"contents":"read",
+       "pulls":"write",
+       "issues":"write",
+       "checks":"write"
+      }
+
 ```
 
 ### Using the Generated Token
@@ -155,6 +168,29 @@ steps:
   displayName: 'List issues using cURL'
 ```
 
+### Using Service Connection with Limited Permissions
+
+```yaml
+steps:
+- task: create-github-app-token@1
+  name: token
+  inputs:
+    githubAppConnection: 'MyGitHubAppConnection' # Connection configured with limited permissions
+    owner: 'MyOrg'
+```
+
+### Specifying Permissions in Task Input
+
+```yaml
+steps:
+- task: create-github-app-token@1
+  inputs:
+    owner: 'MyOrg'
+    appClientId: 'lv2313qqwqeqweqw'
+    certificate: '$(githubAppPem)'
+    permissions: '{"contents":"read","pulls":"write","issues":"write"}'  # Restricts token permissions
+```
+
 ## Proxy Support
 
 The task automatically detects and uses proxy settings from the following environment variables:
@@ -171,6 +207,10 @@ Common issues and solutions:
 1. **Invalid Private Key**: Ensure the PEM file is properly formatted and includes the full key including header and footer
 2. **Permission Issues**: Verify that the GitHub App has the necessary permissions for the repositories
 3. **Installation Not Found**: Confirm that the GitHub App is installed in the specified organization
+4. **Request failed with status code 422**: Check if you are not trying to request more permissions than the app has access to. For example:
+   - If your GitHub App has "read" access to contents, you cannot request "write" access
+   - If you are trying to request `admin:read` permission, the app needs to have `admin:read` or `admin:org` in the GitHub App configuration
+   - The token can only have equal or lower permissions than what is configured in the GitHub App settings
 
 > [!TIP]
 > If you expand the task logs, you can see extra info like the token permissions and repo access. (If you run the pipeline in debug mode it will have extra info as well).
