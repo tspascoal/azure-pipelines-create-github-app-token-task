@@ -59,52 +59,58 @@ export class GitHubService {
     async getInstallationId(jwtToken: string, owner: string, isOrg: boolean, repositories: string[] = []): Promise<number> {
         let url = undefined
         let groupName = '';
+        let id = 0;
 
-        if (repositories.length > 0) {
-            const repo = repositories[0];
-            groupName = `##[group]Get Installation ID for repository ${owner}/${repo}`;
-            url = `${this.baseUrl}/repos/${owner}/${repo}/installation`;
+        try {
+            if (repositories.length > 0) {
+                const repo = repositories[0];
+                groupName = `##[group]Get Installation ID for repository ${owner}/${repo}`;
+                url = `${this.baseUrl}/repos/${owner}/${repo}/installation`;
 
-            // make sure the repo name is valid to avoid injection attacks
-            if (!validateRepositoryName(repo)) {
-                throw new Error(`Invalid repository name format: ${repo}. It can only contain ASCII letters, digits, and the characters ., -, and _`);
+                // make sure the repo name is valid to avoid injection attacks
+                if (!validateRepositoryName(repo)) {
+                    throw new Error(`Invalid repository name format: ${repo}. It can only contain ASCII letters, digits, and the characters ., -, and _`);
+                }
+            } else if (isOrg) {
+                groupName = `##[group]Get Installation ID for organization ${owner}`;
+                url = `${this.baseUrl}/orgs/${owner}/installation`;
+            } else {
+                groupName = `##[group]Get Installation ID for user ${owner}`;
+                url = `${this.baseUrl}/users/${owner}/installation`;
             }
-        } else if(isOrg) {
-            groupName = `##[group]Get Installation ID for organization ${owner}`;
-            url = `${this.baseUrl}/orgs/${owner}/installation`;
-        } else {
-            groupName = `##[group]Get Installation ID for user ${owner}`;
-            url = `${this.baseUrl}/users/${owner}/installation`;
+
+            console.log(`##[group]${groupName}`);
+
+            tl.debug(`Installation ID request URL: ${url}`);
+
+            const response = await this.client.get(url, {
+                headers: {
+                    'Authorization': `Bearer ${jwtToken}`
+                }
+            });
+
+            id = response.data.id;
+
+            this.dumpHeaders(response.headers);
+            tl.debug(`Response payload: ${JSON.stringify(response.data)}`);
+
+            console.log(`Repository selection: ${response.data.repository_selection}`);
+            if (response.data.repository_selection === 'selected' && response.data.repositories) {
+                console.log(`Repositories count: ${response.data.repositories}`);
+                const reposCSV = response.data.repositories.select((r: any) => r.name).join(', ');
+                tl.debug(`Repositories: ${reposCSV}`);
+            }
+            const permissionsCsv = this.formatPermissions(response.data.permissions);
+            console.log(`Permissions: ${permissionsCsv}`);
+
+            tl.debug(`App slug: ${response.data.app_slug}`);
+            tl.debug(`Target type: ${response.data.target_type}`);
+
+        } finally {
+            console.log('##[endgroup]')
         }
 
-        console.log(`##[group]${groupName}`);
-
-        tl.debug(`Installation ID request URL: ${url}`);
-
-        const response = await this.client.get(url, {
-            headers: {
-                'Authorization': `Bearer ${jwtToken}`
-            }
-        });
-
-        this.dumpHeaders(response.headers);
-        tl.debug(`Response payload: ${JSON.stringify(response.data)}`);
-
-        console.log(`Repository selection: ${response.data.repository_selection}`);
-        if (response.data.repository_selection === 'selected' && response.data.repositories) {
-            console.log(`Repositories count: ${response.data.repositories}`);
-            const reposCSV = response.data.repositories.select((r: any) => r.name).join(', ');
-            tl.debug(`Repositories: ${reposCSV}`);
-        }
-        const permissionsCsv = this.formatPermissions(response.data.permissions);
-        console.log(`Permissions: ${permissionsCsv}`);
-        
-        tl.debug(`App slug: ${response.data.app_slug}`);
-        tl.debug(`Target type: ${response.data.target_type}`);
-        
-        console.log('##[endgroup]')
-
-        return response.data.id;
+        return id;
     }
 
     /**
@@ -114,6 +120,7 @@ export class GitHubService {
      * @param installationId - The ID of the GitHub App installation for which the token is being created.
      * @param repositories - An optional array of repository names to scope the token to specific repositories.
      *                        If not provided, the token will be scoped to the entire installation.
+     * @param permissions - An optional object specifying the permissions to be granted to the token.
      * @returns A promise that resolves to the installation token as a string.
      *
      * @remarks
@@ -121,8 +128,9 @@ export class GitHubService {
      * It logs details about the token creation process, including repository selection and permissions.
      * The token is scoped based on the provided repositories or the entire installation if no repositories are specified.
      */
-    async getInstallationToken(jwtToken: string, installationId: number, repositories: string[] = []): Promise<string> {
+    async getInstallationToken(jwtToken: string, installationId: number, repositories: string[] = [], permissions?: { [key: string]: string }): Promise<string> {
         let groupName = '';
+        let token = '';
         if (repositories.length > 0) {
             groupName = `##[group]Create installation token for repositories: ${repositories} with ${installationId}`;
         } else {
@@ -131,28 +139,40 @@ export class GitHubService {
 
         console.log(`##[group]${groupName}`);
 
-        const response = await this.client.post(
-            `${this.baseUrl}/app/installations/${installationId}/access_tokens`,
-            {
-                repositories: repositories
-            },
-            {
-                headers: {
-                    'Authorization': `Bearer ${jwtToken}`
-                }
+        try {
+
+            const requestBody: any = {};
+            if (repositories.length > 0) {
+                requestBody.repositories = repositories;
             }
-        );
+            if (permissions && Object.keys(permissions).length > 0) {
+                requestBody.permissions = permissions;
+            }
 
-        this.dumpHeaders(response.headers);
+            const response = await this.client.post(
+                `${this.baseUrl}/app/installations/${installationId}/access_tokens`,
+                requestBody,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${jwtToken}`
+                    }
+                }
+            );
+            
+            token = response.data.token;
 
-        tl.debug(`Expires: ${response.data.expires_at}`);
-        console.log(`Repository selection: ${response.data.repository_selection}`);
-        const permissionsCsv = this.formatPermissions(response.data.permissions);
-        console.log(`Permissions: ${permissionsCsv}`);
+            this.dumpHeaders(response.headers);
 
-        console.log('##[endgroup]')
+            tl.debug(`Expires: ${response.data.expires_at}`);
+            console.log(`Repository selection: ${response.data.repository_selection}`);
+            const permissionsCsv = this.formatPermissions(response.data.permissions);
+            console.log(`Permissions: ${permissionsCsv}`);
 
-        return response.data.token;
+        } finally {
+            console.log('##[endgroup]')
+        }
+
+        return token;
     }
 
     async revokeInstallationToken(token: string): Promise<boolean> {
@@ -170,7 +190,7 @@ export class GitHubService {
             return true;
         } catch (err: any) {
             console.log(`Error revoking token: ${err.message}`);
-            if(err.response) {
+            if (err.response) {
                 this.dumpHeaders(err.response.headers);
             }
             return false;

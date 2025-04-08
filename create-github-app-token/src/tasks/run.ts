@@ -18,6 +18,19 @@ async function run() {
     let repositoriesList = tl.getInput('repositories', false)?.trim() || undefined;
     const connectedServiceName = tl.getInput('githubAppConnection', false);
     const skipTokenRevoke = tl.getBoolInput('skipTokenRevoke', false);
+    const permissionsInput = tl.getInput('permissions', false);
+
+    let permissions: { [key: string]: string } | undefined = undefined;
+    if (permissionsInput) {
+      try {
+        permissions = JSON.parse(permissionsInput);
+        if (typeof permissions !== 'object' || permissions === null) {
+          throw new Error('Permissions must be an object');
+        }
+      } catch (err: any) {
+        throw new Error(`Failed to parse permissions JSON: ${err.message}`);
+      }
+    }
 
     let privateKey = '';
 
@@ -29,7 +42,11 @@ async function run() {
     console.log(`Owner: ${owner}`);
     console.log(`Account Type: ${accountType}`);
     console.log(`Repositories List: ${repositoriesList ? repositoriesList : 'Not Provided'}`);
+    console.log(`Permissions: ${permissions ? JSON.stringify(permissions) : 'Not Provided'}`);
     console.log(`Skip Token Revoke: ${skipTokenRevoke}`);
+    if (permissions) {
+      console.log(`Permissions: ${JSON.stringify(permissions)}`);
+    }
     console.log('##[endgroup]')
 
     // Order of precedence for private key:
@@ -43,6 +60,23 @@ async function run() {
         privateKey = endpoint.parameters['certificate'];
         appClientId = endpoint.parameters['appClientId'];
         baseUrl = endpoint.parameters['url'] || baseUrl;
+        
+        const limitPermissions = endpoint.parameters['limitPermissions'];
+        if (limitPermissions) {
+          console.log('Limiting permissions to those defined in the service connection');
+          try {
+            permissions = JSON.parse(limitPermissions);
+            if (typeof permissions !== 'object' || permissions === null) {
+              throw new Error('Service connection permissions must be an object');
+            }
+            console.log('Using permissions from service connection, overriding task input if any');
+          } catch (err: any) {
+            throw new Error(`Failed to parse service connection permissions JSON: ${err.message}`);
+          }
+          tl.warning(`Forcing permissions from service connection`);
+          console.log(`Forced permissions: ${JSON.stringify(permissions)}`);
+        }
+
         const forceRepoScope = endpoint.parameters['forceRepoScope']?.toLowerCase() === 'true';
         if (forceRepoScope) {
           console.log('Forcing repo scope)');
@@ -125,7 +159,7 @@ async function run() {
     const installationId = await githubService.getInstallationId(jwtToken, owner, isOrg , repositories);
     console.log(`Found installation ID: ${installationId}`);
 
-    const token = await githubService.getInstallationToken(jwtToken, installationId, repositories);
+    const token = await githubService.getInstallationToken(jwtToken, installationId, repositories, permissions);
     console.log('Installation token generated successfully');
 
     // Set the output variables

@@ -2,7 +2,7 @@
     "manifestVersion": 1,
     "id": "create-github-app-token",
     "name": "GitHub App Token Generator",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "publisher": "INSERT YOUR PUBLISHER HERE",
     "public": false,
     "targets": [
@@ -52,6 +52,7 @@
                 "name": "githubappauthentication",
                 "isVerifiable": false,
                 "displayName": "GitHub App",
+                "helpMarkDown": "GitHub App Service Connection. See [azure-pipelines-create-github-app-token-task](https://github.com/tspascoal/azure-pipelines-create-github-app-token-task) for more information.",
                 "url": {
                     "value": "https://api.github.com/",
                     "displayName": "GitHub API URL",
@@ -81,6 +82,17 @@
                                 "isConfidential": true,
                                 "validation": {
                                     "isRequired": true,
+                                    "dataType": "string"
+                                }
+                            },
+                            {
+                                "id": "limitPermissions",
+                                "name": "Limit Token Permissions",
+                                "description": "Optional JSON object to restrict token permissions. If empty will use app permissions or permissions set at task level. If provided, this will override any permissions set in the task input Format: {\"permission\":\"accesstype\"} EG: {\"contents\":\"read\",\"issues\":\"write\"}. see permissions parameter https://docs.github.com/en/rest/apps/apps?apiVersion=2022-11-28#create-an-installation-access-token-for-an-app for full list of permissions.",
+                                "inputMode": "textarea",
+                                "isConfidential": false,
+                                "validation": {
+                                    "isRequired": false,
                                     "dataType": "string"
                                 }
                             },
