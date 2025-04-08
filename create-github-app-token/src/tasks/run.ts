@@ -73,7 +73,7 @@ async function run() {
           } catch (err: any) {
             throw new Error(`Failed to parse service connection permissions JSON: ${err.message}`);
           }
-          tl.warning(`Forcing permisssions from service connection`);
+          tl.warning(`Forcing permissions from service connection`);
           console.log(`Forced permissions: ${JSON.stringify(permissions)}`);
         }
 
