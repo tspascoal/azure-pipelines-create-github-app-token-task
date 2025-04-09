@@ -169,12 +169,13 @@ async function run() {
     const installationId = await githubService.getInstallationId(jwtToken, owner, isOrg, repositories);
     console.log(`Found installation ID: ${installationId}`);
 
-    const token = await githubService.getInstallationToken(jwtToken, installationId, repositories, permissions);
+    const { token, expiresAt } = await githubService.getInstallationToken(jwtToken, installationId, repositories, permissions);
     console.log('Installation token generated successfully');
 
     // Set the output variables
     tl.setVariable(constants.INSTALLATIONID_OUTPUT_VARNAME, installationId.toString(), false);
     tl.setVariable(constants.INSTALLATION_TOKEN_OUTPUT_VARNAME, token, true); // secret
+    tl.setVariable(constants.TOKEN_EXPIRATION_OUTPUT_VARNAME, expiresAt, false);
 
     // Save state for post job
     tl.setTaskVariable(constants.INSTALLATION_TOKEN_OUTPUT_VARNAME, token, true); // secret

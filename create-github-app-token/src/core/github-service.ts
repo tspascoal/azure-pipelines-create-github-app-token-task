@@ -135,9 +135,10 @@ export class GitHubService {
      * It logs details about the token creation process, including repository selection and permissions.
      * The token is scoped based on the provided repositories or the entire installation if no repositories are specified.
      */
-    async getInstallationToken(jwtToken: string, installationId: number, repositories: string[] = [], permissions?: { [key: string]: string }): Promise<string> {
+    async getInstallationToken(jwtToken: string, installationId: number, repositories: string[] = [], permissions?: { [key: string]: string }): Promise<{ token: string; expiresAt: string }> {
         let groupName = '';
         let token = '';
+        let expiresAt = '';
         if (repositories.length > 0) {
             groupName = `##[group]Create installation token for repositories: ${repositories} with ${installationId}`;
         } else {
@@ -167,10 +168,11 @@ export class GitHubService {
             );
             
             token = response.data.token;
+            expiresAt = response.data.expires_at;
 
             this.dumpHeaders(response.headers);
 
-            tl.debug(`Expires: ${response.data.expires_at}`);
+            tl.debug(`Expires: ${expiresAt}`);
             console.log(`Repository selection: ${response.data.repository_selection}`);
             const permissionsCsv = this.formatPermissions(response.data.permissions);
             console.log(`Permissions: ${permissionsCsv}`);
@@ -179,7 +181,7 @@ export class GitHubService {
             console.log('##[endgroup]')
         }
 
-        return token;
+        return { token, expiresAt };
     }
 
     async revokeInstallationToken(token: string): Promise<boolean> {
