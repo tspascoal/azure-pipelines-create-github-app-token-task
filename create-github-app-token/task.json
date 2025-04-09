@@ -10,7 +10,7 @@
     "version": {
         "Major": 1,
         "Minor": 0,
-        "Patch": 2
+        "Patch": 3
     },
     "instanceNameFormat": "Create GitHub App Installation Token",
     "inputs": [
@@ -91,6 +91,10 @@
         {
             "name": "installationId",
             "description": "The ID of the GitHub App installation"
+        },
+        {
+            "name": "tokenExpiration",
+            "description": "The expiration date and time of the generated token (ISO 8601 format)"
         }
     ],
     "execution": {

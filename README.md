@@ -78,8 +78,9 @@ steps:
 
 | Variable | Description |
 |----------|-------------|
-| $(installationToken) | The generated GitHub App installation token |
-| $(installationId) | The ID of the GitHub App installation |
+| installationToken | The generated GitHub App installation token |
+| installationId | The ID of the GitHub App installation |
+| tokenExpiration | The expiration date and time of the generated token (ISO 8601 format) |
 
 ### Service Connection Setup (optional)
 
