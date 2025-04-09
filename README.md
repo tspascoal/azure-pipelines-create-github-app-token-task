@@ -64,7 +64,7 @@ steps:
 | Parameter | Required | Description |
 |-----------|----------|-------------|
 | githubAppConnection | No | The GitHub App connection to use (preferred method) |
-| owner | No | The GitHub organization name or user account where the app is installed. If not provided it will automatically fetched from `Build.Repository.Name` variable. |
+| owner | No | The GitHub organization name or user account where the app is installed. If not provided, it will be automatically fetched from the `Build.Repository.Name` variable. |
 | repositories | No | Comma-separated list of repositories to scope the token to. If empty, token will be scoped to all repositories (in which the app has access to) |
 | appClientId | No* | The GitHub App ID (required if not using service connection) |
 | certificate | No* | The PEM certificate content (required if not using service connection) |

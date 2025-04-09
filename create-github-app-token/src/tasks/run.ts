@@ -94,7 +94,7 @@ async function run() {
           console.log('Forcing repo scope)');
           console.log(`Repo Provider: ${provider}`);
 
-          failIfProviderIsNotGitHub(provider, "Forcing repo scope is only supported for GitHub repositories. Repo provider is ${provider}");
+          failIfProviderIsNotGitHub(provider, `Forcing repo scope is only supported for GitHub repositories. Repo provider is ${provider}`);
           const forcedRepo = getRepoName(nwo);
           console.log(`Forcing repo scope to ${forcedRepo}`);
           if (!repositoriesList) {
