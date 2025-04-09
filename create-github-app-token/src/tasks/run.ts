@@ -3,14 +3,26 @@ import * as fs from 'fs';
 import { GitHubService } from '../core/github-service';
 import { ProxyConfig } from '../core/proxy-config';
 import * as constants from '../utils/constants';
-import { getRepoName } from '../utils/github'; 
+import { getRepoName, getOwnerName } from '../utils/github';
 import { validateAccountType } from '../utils/validation';
 
 async function run() {
   try {
     let baseUrl = constants.DEFAULT_API_URL;
 
-    const owner = tl.getInputRequired('owner')!;
+    const provider = tl.getVariable('Build.Repository.Provider');
+    let owner = tl.getInput('owner', false)
+    const nwo = tl.getVariable('Build.Repository.Name')!;
+
+    // If owner is not provided,get it from the repository name (provider has to be GitHub)
+    if (!owner) {
+      failIfProviderIsNotGitHub(provider, "If owner is not provided, the repository provider must be GitHub");
+      const extractedOwner = getOwnerName(nwo);
+      console.log(`Extracted owner from Build.Repository.Name: ${extractedOwner}`);
+
+      owner = extractedOwner;
+    }
+
     const accountType = tl.getInput('accountType', false) || constants.ACCOUNT_TYPE_ORG;
     let appClientId = tl.getInput('appClientId', false) || undefined;
     const privateKeyPath = tl.getInput('certificateFile', false) || '';
@@ -60,7 +72,7 @@ async function run() {
         privateKey = endpoint.parameters['certificate'];
         appClientId = endpoint.parameters['appClientId'];
         baseUrl = endpoint.parameters['url'] || baseUrl;
-        
+
         const limitPermissions = endpoint.parameters['limitPermissions'];
         if (limitPermissions) {
           console.log('Limiting permissions to those defined in the service connection');
@@ -80,26 +92,24 @@ async function run() {
         const forceRepoScope = endpoint.parameters['forceRepoScope']?.toLowerCase() === 'true';
         if (forceRepoScope) {
           console.log('Forcing repo scope)');
-          const provider = tl.getVariable('Build.Repository.Provider');
           console.log(`Repo Provider: ${provider}`);
 
-            if (provider?.toLowerCase() === 'github') {
-            const repo = tl.getVariable('Build.Repository.Name');
-            if (repo) {
-              const forcedRepo = getRepoName(repo);
-              console.log(`Forcing repo scope to ${forcedRepo}`);
-              if (!repositoriesList) {
-                tl.warning(`Forcing repo scope to ${forcedRepo}, even though no repositories were provided`);
-              } else if(repositoriesList != forcedRepo) {
-                tl.warning(`Forcing repo scope to ${forcedRepo}. Ignoring repositories input ${repositoriesList}`);
-              }
-              
-              repositoriesList = forcedRepo;
-            }
-          } else {
-            tl.setResult(tl.TaskResult.Failed, 'Forcing repo scope is only supported for GitHub repositories. Repo provider is ${provider}');
-            return;
+          failIfProviderIsNotGitHub(provider, `Forcing repo scope is only supported for GitHub repositories. Repo provider is ${provider}`);
+          const forcedRepo = getRepoName(nwo);
+          console.log(`Forcing repo scope to ${forcedRepo}`);
+          if (!repositoriesList) {
+            tl.warning(`Forcing repo scope to ${forcedRepo}, even though no repositories were provided`);
+          } else if (repositoriesList != forcedRepo) {
+            tl.warning(`Forcing repo scope to ${forcedRepo}. Ignoring repositories input ${repositoriesList}`);
           }
+
+          const forcedOwner = getOwnerName(nwo);
+            if (owner?.toLowerCase() !== forcedOwner?.toLowerCase()) {
+            tl.warning(`Forcing owner ${forcedOwner} previously ${owner}. This may fail if there is an owner type mismatch`);
+            owner = getOwnerName(nwo);
+          }
+          
+          repositoriesList = forcedRepo;
         }
 
         console.log(`Base URL: ${baseUrl}`);
@@ -111,7 +121,7 @@ async function run() {
         // Unreachable code since it forces a required check, but just in case
         console.log('##[endgroup]');
         tl.setResult(tl.TaskResult.Failed, `Service connection ${connectedServiceName} not found`);
-        
+
         return;
       }
     }
@@ -135,7 +145,7 @@ async function run() {
     }
 
     // If repositories is define we don't really need account type
-    if(!repositoriesList)  {
+    if (!repositoriesList) {
       validateAccountType(accountType);
     }
 
@@ -156,7 +166,7 @@ async function run() {
     }
 
     const isOrg = accountType.toLowerCase() === constants.ACCOUNT_TYPE_ORG;
-    const installationId = await githubService.getInstallationId(jwtToken, owner, isOrg , repositories);
+    const installationId = await githubService.getInstallationId(jwtToken, owner, isOrg, repositories);
     console.log(`Found installation ID: ${installationId}`);
 
     const token = await githubService.getInstallationToken(jwtToken, installationId, repositories, permissions);
@@ -177,3 +187,10 @@ async function run() {
 }
 
 run();
+
+function failIfProviderIsNotGitHub(provider: string | undefined, message: string = 'Provider is not GitHub') {
+  if (provider?.toLowerCase() !== 'github') {
+    tl.error(message)
+    throw new Error(message);
+  }
+}

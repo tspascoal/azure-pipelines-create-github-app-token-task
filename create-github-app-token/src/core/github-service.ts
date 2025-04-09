@@ -1,7 +1,7 @@
 import * as tl from 'azure-pipelines-task-lib/task';
 import axios, { AxiosInstance } from 'axios';
 import * as jwt from 'jsonwebtoken';
-import { ProxyConfig, ProxyOptions } from './proxy-config';
+import { ProxyConfig } from './proxy-config';
 import { validateRepositoryName } from '../utils/validation';
 import * as constants from '../utils/constants';
 
@@ -106,6 +106,13 @@ export class GitHubService {
             tl.debug(`App slug: ${response.data.app_slug}`);
             tl.debug(`Target type: ${response.data.target_type}`);
 
+        } catch (err: any) {
+            if(err.status && err.status === 404) {
+                tl.error(`Couldn't get installation id. Validate owner${repositories.length > 0 ? ' and repository' : ''} and if  GitHub App is installed on ${owner}${repositories.length > 0 ? ' and with access to repository' : ''}.`);
+            } else {
+                tl.error(`Error getting installation ID. Please validate the owner and repository (and account type): ${err.message}`);
+            }
+            throw err;
         } finally {
             console.log('##[endgroup]')
         }

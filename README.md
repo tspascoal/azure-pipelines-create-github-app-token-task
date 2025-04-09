@@ -1,6 +1,5 @@
 # GitHub App Token Generator for Azure Pipelines
 
-
 Azure Pipelines extension to create a GitHub App installation tokens that can be used for calling GitHub APIs. It's particularly useful when you need to interact with GitHub repositories using a GitHub App instead of personal access tokens or other authentication methods. The extension include a task that generates GitHub App installation tokens for API authentication and a service connection definition that allows you to save the GitHub App data and credentials securely in Azure DevOps.
 
 > [!NOTE]
@@ -65,7 +64,7 @@ steps:
 | Parameter | Required | Description |
 |-----------|----------|-------------|
 | githubAppConnection | No | The GitHub App connection to use (preferred method) |
-| owner | Yes | The GitHub organization name or user account where the app is installed |
+| owner | No | The GitHub organization name or user account where the app is installed. If not provided, it will be automatically fetched from the `Build.Repository.Name` variable. |
 | repositories | No | Comma-separated list of repositories to scope the token to. If empty, token will be scoped to all repositories (in which the app has access to) |
 | appClientId | No* | The GitHub App ID (required if not using service connection) |
 | certificate | No* | The PEM certificate content (required if not using service connection) |
@@ -111,7 +110,6 @@ steps:
   name: token
   inputs:
     githubAppConnection: 'MyGitHubAppConnection'
-    owner: 'MyOrg'
 - bash: |
     gh api \
     --method POST -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" \
@@ -160,8 +158,6 @@ steps:
   name: githubAuth
   inputs:
     githubAppConnection: 'MyGitHubAppConnection'
-    owner: 'MyOrg'
-    
 
 - script: |
     curl -H "Authorization: Bearer $(githubAuth.installationToken)" https://api.github.com/repos/MyOrg/MyRepo/issues | jq
