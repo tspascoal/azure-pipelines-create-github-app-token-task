@@ -65,6 +65,7 @@ steps:
 |-----------|----------|-------------|
 | githubAppConnection | No | The GitHub App connection to use (preferred method) |
 | owner | No | The GitHub organization name or user account where the app is installed. If not provided, it will be automatically fetched from the `Build.Repository.Name` variable. |
+| accountType | No | The type of account to use for the token. Options: `org` (organization) or `user` (user account). Default is `org`. |
 | repositories | No | Comma-separated list of repositories to scope the token to. If empty, token will be scoped to all repositories (in which the app has access to) |
 | appClientId | No* | The GitHub App ID (required if not using service connection) |
 | certificate | No* | The PEM certificate content (required if not using service connection) |
