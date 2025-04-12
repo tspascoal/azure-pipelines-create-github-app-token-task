@@ -48,6 +48,12 @@ export class GitHubService {
     /**
      * Retrieves the installation ID for a GitHub App based on the provided parameters.
      *
+     * APIs:
+     * 
+     * - https://docs.github.com/en/rest/apps/apps?apiVersion=2022-11-28#get-a-user-installation-for-the-authenticated-app
+     * - https://docs.github.com/en/rest/apps/apps?apiVersion=2022-11-28#get-an-organization-installation-for-the-authenticated-app
+     * - https://docs.github.com/en/rest/apps/apps?apiVersion=2022-11-28#get-a-repository-installation-for-the-authenticated-app
+     * 
      * @param jwtToken - The JSON Web Token (JWT) used for authentication with the GitHub API.
      * @param owner - The owner of the repository or organization (username or organization name).
      * @param isOrg - A boolean indicating whether the owner is an organization (not relevant if repo is being passed).
@@ -107,21 +113,24 @@ export class GitHubService {
             tl.debug(`Target type: ${response.data.target_type}`);
 
         } catch (err: any) {
-            if(err.status && err.status === 404) {
-                tl.error(`Couldn't get installation id. Validate owner${repositories.length > 0 ? ' and repository' : ''} and if  GitHub App is installed on ${owner}${repositories.length > 0 ? ' and with access to repository' : ''}.`);
+            let message = '';
+            if (err.status === 404) {
+                const targetType = isOrg ? 'Organization' : 'account';
+                message = `GitHub App not found for ${targetType} ${owner}. Please verify the installation${repositories.length ? ' and repository access' : ''}.`;
             } else {
-                tl.error(`Error getting installation ID. Please validate the owner and repository (and account type): ${err.message}`);
+                message = `Failed to get installation ID: ${err.message}`;
             }
-            throw err;
+            throw new Error(message);
         } finally {
             console.log('##[endgroup]')
         }
-
         return id;
     }
 
     /**
      * Generates an installation token for a GitHub App installation.
+     * 
+     * API: https://docs.github.com/en/rest/apps/apps?apiVersion=2022-11-28#create-an-installation-access-token-for-an-app
      *
      * @param jwtToken - The JSON Web Token (JWT) used for authenticating the request.
      * @param installationId - The ID of the GitHub App installation for which the token is being created.
@@ -147,9 +156,8 @@ export class GitHubService {
 
         console.log(`##[group]${groupName}`);
 
+        const requestBody: any = {};
         try {
-
-            const requestBody: any = {};
             if (repositories.length > 0) {
                 requestBody.repositories = repositories;
             }
@@ -166,7 +174,7 @@ export class GitHubService {
                     }
                 }
             );
-            
+
             token = response.data.token;
             expiresAt = response.data.expires_at;
 
@@ -177,6 +185,24 @@ export class GitHubService {
             const permissionsCsv = this.formatPermissions(response.data.permissions);
             console.log(`Permissions: ${permissionsCsv}`);
 
+        } catch (err: any) {
+            if (err.response) {
+                let message
+                this.dumpHeaders(err.response.headers);
+                if (err.response.status === 404) {
+                    message = `Installation ID ${installationId} not found. Please verify the installation ID is correct.`;
+                } else if (err.response.status === 422) {
+                    const errorMessage = err.response.data.message || 'The provided parameters are invalid';
+                    const permissionsMessage = requestBody.permissions ? 'Please check the permissions. You can only downgrade app permissions.' : '';
+                    const repositoriesMessage = requestBody.repositories ? 'Please check the repositories. You can only scope the token to the repositories that are already selected or exist.' : '';
+                    message = `Invalid request: ${errorMessage} ${permissionsMessage} ${repositoriesMessage}`.trim()
+                } else {
+                    message = `Failed to create installation token: ${err.message}`
+                }
+
+                throw new Error(message);
+            }
+            throw new Error("Failed to create installation token");
         } finally {
             console.log('##[endgroup]')
         }

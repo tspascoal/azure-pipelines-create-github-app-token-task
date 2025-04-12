@@ -2,7 +2,7 @@
     "manifestVersion": 1,
     "id": "create-github-app-token",
     "name": "GitHub App Token Generator",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "publisher": "INSERT YOUR PUBLISHER HERE",
     "public": false,
     "targets": [
