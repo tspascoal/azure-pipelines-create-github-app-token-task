@@ -100,7 +100,11 @@
   },
   "exclude": [
     "node_modules",
+    "dist",
+    "lib",
+    "coverage",
+    "**/*.test.ts",
     "**/*.spec.ts",
-    "dist"
+    "test/**/*"
   ]
 }

@@ -102,8 +102,8 @@ export class GitHubService {
 
             console.log(`Repository selection: ${response.data.repository_selection}`);
             if (response.data.repository_selection === 'selected' && response.data.repositories) {
-                console.log(`Repositories count: ${response.data.repositories}`);
-                const reposCSV = response.data.repositories.select((r: any) => r.name).join(', ');
+                console.log(`Repositories count: ${response.data.repositories.length}`);
+                const reposCSV = response.data.repositories.map((r: any) => r.name).join(', ');
                 tl.debug(`Repositories: ${reposCSV}`);
             }
             const permissionsCsv = this.formatPermissions(response.data.permissions);
@@ -144,7 +144,9 @@ export class GitHubService {
      * It logs details about the token creation process, including repository selection and permissions.
      * The token is scoped based on the provided repositories or the entire installation if no repositories are specified.
      */
-    async getInstallationToken(jwtToken: string, installationId: number, repositories: string[] = [], permissions?: { [key: string]: string }): Promise<{ token: string; expiresAt: string }> {
+    async getInstallationToken(jwtToken: string, installationId: number, repositories: string[] = [], permissions?: { [key: string]: string }): Promise<{
+        token: string; expiresAt: string 
+}> {
         let groupName = '';
         let token = '';
         let expiresAt = '';
@@ -193,9 +195,9 @@ export class GitHubService {
                     message = `Installation ID ${installationId} not found. Please verify the installation ID is correct.`;
                 } else if (err.response.status === 422) {
                     const errorMessage = err.response.data.message || 'The provided parameters are invalid';
-                    const permissionsMessage = requestBody.permissions ? 'Please check the permissions. You can only downgrade app permissions.' : '';
-                    const repositoriesMessage = requestBody.repositories ? 'Please check the repositories. You can only scope the token to the repositories that are already selected or exist.' : '';
-                    message = `Invalid request: ${errorMessage} ${permissionsMessage} ${repositoriesMessage}`.trim()
+                    const permissionsMessage = requestBody.permissions ? ' Please check the permissions. You can only downgrade app permissions.' : '';
+                    const repositoriesMessage = requestBody.repositories ? ' Please check the repositories. You can only scope the token to the repositories that are already selected or exist.' : '';
+                    message = `Invalid request: ${errorMessage}${permissionsMessage}${repositoriesMessage}`;
                 } else {
                     message = `Failed to create installation token: ${err.message}`
                 }

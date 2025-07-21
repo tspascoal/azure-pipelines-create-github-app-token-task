@@ -187,11 +187,19 @@ async function run() {
   }
 }
 
-run();
-
 function failIfProviderIsNotGitHub(provider: string | undefined, message: string = 'Provider is not GitHub') {
   if (provider?.toLowerCase() !== 'github') {
     tl.error(message)
     throw new Error(message);
   }
 }
+
+// Only run if this module is executed directly (not imported)
+if (require.main === module) {
+  run();
+}
+
+// Export for testing
+export { run };
+
+
