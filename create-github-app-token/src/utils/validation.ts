@@ -6,7 +6,7 @@ export function validateRepositoryName(repo: string): boolean {
 }
 
 export function validateAccountType(accountType: string) {
-    const validAccountTypes = [constants.ACCOUNT_TYPE_ORG, constants.ACCOUNT_TYPE_USER];
+    const validAccountTypes = [constants.ACCOUNT_TYPE_ORG, constants.ACCOUNT_TYPE_USER, constants.ACCOUNT_TYPE_ENTERPRISE];
     if(!validAccountTypes.includes(accountType)) {
         throw new Error(`Invalid account type ${accountType}. Must be one of: ${validAccountTypes.join(', ')}`);
     }

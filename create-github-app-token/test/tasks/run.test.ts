@@ -104,7 +104,7 @@ describe('run task logic', () => {
 
       expect(MockedGitHubService).toHaveBeenCalledWith('https://api.github.com/', { proxy: mockProxyConfig });
       expect(mockGitHubService.generateJWT).toHaveBeenCalledWith('test-app-id', 'mock-pem-key');
-      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'test-org', true, []);
+      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'test-org', "org", []);
       expect(mockGitHubService.getInstallationToken).toHaveBeenCalledWith('mock.jwt.token', 12345, [], undefined);
       
       // Verify output variables are set
@@ -131,7 +131,7 @@ describe('run task logic', () => {
 
       // Should generate JWT and proceed through the flow
       expect(mockGitHubService.generateJWT).toHaveBeenCalledWith('test-app-id', 'mock-pem-key');
-      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'test-org', true, []);
+      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'test-org', "org", []);
       expect(mockGitHubService.getInstallationToken).toHaveBeenCalledWith('mock.jwt.token', 12345, [], undefined);
 
       // Should set output variables
@@ -168,7 +168,7 @@ describe('run task logic', () => {
       expect(mockGitHubService.generateJWT).toHaveBeenCalledWith('test-app-id', mockPemContent);
 
       // Should proceed through the rest of the flow and set output variables
-      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'test-org', true, []);
+      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'test-org', "org", []);
       expect(mockGitHubService.getInstallationToken).toHaveBeenCalledWith('mock.jwt.token', 12345, [], undefined);
 
       expect(mockedTl.setVariable).toHaveBeenCalledWith(constants.INSTALLATIONID_OUTPUT_VARNAME, '12345', false);
@@ -207,7 +207,7 @@ describe('run task logic', () => {
       await run();
 
       // Verify the extracted owner is used correctly
-      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'auto-owner', true, []);
+      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'auto-owner', "org", []);
       expect(mockGitHubService.getInstallationToken).toHaveBeenCalledWith('mock.jwt.token', 12345, [], undefined);
       
       // Verify successful completion with output variables set
@@ -243,7 +243,7 @@ describe('run task logic', () => {
       await run();
 
       // Verify repositories are parsed and trimmed correctly
-      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'test-org', true, ['repo1', 'repo2', 'repo3']);
+      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'test-org', "org", ['repo1', 'repo2', 'repo3']);
       expect(mockGitHubService.getInstallationToken).toHaveBeenCalledWith('mock.jwt.token', 12345, ['repo1', 'repo2', 'repo3'], undefined);
       
       // Verify successful completion with output variables set
@@ -454,7 +454,7 @@ describe('run task logic', () => {
 
       expect(mockedTl.setResult).toHaveBeenCalledWith(
         tl.TaskResult.Failed,
-        'Invalid account type invalid-account-type. Must be one of: org, user'
+        'Invalid account type invalid-account-type. Must be one of: org, user, enterprise'
       );
     });
 
@@ -607,7 +607,7 @@ describe('run task logic', () => {
       await run();
 
       // Should use forced owner and repo from Build.Repository.Name
-      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'force-owner', true, ['force-repo']);
+      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'force-owner', "org", ['force-repo']);
       expect(mockGitHubService.getInstallationToken).toHaveBeenCalledWith('mock.jwt.token', 12345, ['force-repo'], undefined);
 
       // Assert that a debug message was logged about ignoring the passed repo
@@ -721,7 +721,7 @@ describe('run task logic', () => {
       expect(mockedTl.warning).toHaveBeenCalledWith('Forcing repo scope to force-repo. Ignoring repositories input different-repo');
       
       // Should use forced repo from Build.Repository.Name, not the input
-      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'force-owner', true, ['force-repo']);
+      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'force-owner', "org", ['force-repo']);
       expect(mockGitHubService.getInstallationToken).toHaveBeenCalledWith('mock.jwt.token', 12345, ['force-repo'], undefined);
     });
 
@@ -764,7 +764,7 @@ describe('run task logic', () => {
       expect(mockedTl.warning).toHaveBeenCalledWith('Forcing repo scope to force-repo, even though no repositories were provided');
       
       // Should use forced repo
-      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'force-owner', true, ['force-repo']);
+      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'force-owner', "org", ['force-repo']);
       expect(mockGitHubService.getInstallationToken).toHaveBeenCalledWith('mock.jwt.token', 12345, ['force-repo'], undefined);
     });
   });

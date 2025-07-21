@@ -165,8 +165,7 @@ async function run() {
       repositories = repositoriesList.split(',').map(repo => repo.trim());
     }
 
-    const isOrg = accountType.toLowerCase() === constants.ACCOUNT_TYPE_ORG;
-    const installationId = await githubService.getInstallationId(jwtToken, owner, isOrg, repositories);
+    const installationId = await githubService.getInstallationId(jwtToken, owner, accountType, repositories);
     console.log(`Found installation ID: ${installationId}`);
 
     const { token, expiresAt } = await githubService.getInstallationToken(jwtToken, installationId, repositories, permissions);

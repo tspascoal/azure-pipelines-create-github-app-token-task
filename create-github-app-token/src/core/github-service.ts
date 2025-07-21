@@ -53,16 +53,17 @@ export class GitHubService {
      * - https://docs.github.com/en/rest/apps/apps?apiVersion=2022-11-28#get-a-user-installation-for-the-authenticated-app
      * - https://docs.github.com/en/rest/apps/apps?apiVersion=2022-11-28#get-an-organization-installation-for-the-authenticated-app
      * - https://docs.github.com/en/rest/apps/apps?apiVersion=2022-11-28#get-a-repository-installation-for-the-authenticated-app
+     * - https://docs.github.com/en/rest/apps/apps?apiVersion=2022-11-28#list-installations-for-the-authenticated-app (for enterprise installations)
      * 
      * @param jwtToken - The JSON Web Token (JWT) used for authentication with the GitHub API.
-     * @param owner - The owner of the repository or organization (username or organization name).
-     * @param isOrg - A boolean indicating whether the owner is an organization (not relevant if repo is being passed).
+     * @param owner - The owner of the repository, organization, or enterprise (username, organization name, or enterprise slug).
+     * @param accountType - The type of account: 'org', 'user', or 'enterprise'.
      * @param repositories - An optional array of repository names to narrow down the installation ID retrieval.
      *                        If provided, the first repository in the array will be used to get the installation token.
      * @returns A promise that resolves to the installation ID of the GitHub App.
      * @throws An error if the repository name is invalid or if the API request fails.
      */
-    async getInstallationId(jwtToken: string, owner: string, isOrg: boolean, repositories: string[] = []): Promise<number> {
+    async getInstallationId(jwtToken: string, owner: string, accountType: string, repositories: string[] = []): Promise<number> {
         let url = undefined
         let groupName = '';
         let id = 0;
@@ -77,7 +78,10 @@ export class GitHubService {
                 if (!validateRepositoryName(repo)) {
                     throw new Error(`Invalid repository name format: ${repo}. It can only contain ASCII letters, digits, and the characters ., -, and _`);
                 }
-            } else if (isOrg) {
+            } else if (accountType.toLowerCase() === constants.ACCOUNT_TYPE_ENTERPRISE) {
+                // Enterprise installations require pagination through all installations
+                return await this.getEnterpriseInstallationId(jwtToken, owner);
+            } else if (accountType.toLowerCase() === constants.ACCOUNT_TYPE_ORG) {
                 groupName = `##[group]Get Installation ID for organization ${owner}`;
                 url = `${this.baseUrl}/orgs/${owner}/installation`;
             } else {
@@ -115,7 +119,12 @@ export class GitHubService {
         } catch (err: any) {
             let message = '';
             if (err.status === 404) {
-                const targetType = isOrg ? 'Organization' : 'account';
+                let targetType = 'account';
+                if (accountType.toLowerCase() === constants.ACCOUNT_TYPE_ORG) {
+                    targetType = 'Organization';
+                } else if (accountType.toLowerCase() === constants.ACCOUNT_TYPE_ENTERPRISE) {
+                    targetType = 'Enterprise';
+                }
                 message = `GitHub App not found for ${targetType} ${owner}. Please verify the installation${repositories.length ? ' and repository access' : ''}.`;
             } else {
                 message = `Failed to get installation ID: ${err.message}`;
@@ -125,6 +134,136 @@ export class GitHubService {
             console.log('##[endgroup]')
         }
         return id;
+    }
+
+    /**
+     * Gets the installation ID for an enterprise installation by listing all installations
+     * and filtering for enterprise type. Handles pagination automatically.
+     * 
+     * Note: This is a workaround since there is no direct API to get the installation ID 
+     * for enterprise installations (unlike organizations and repositories).
+     * 
+     * API: https://docs.github.com/en/rest/apps/apps?apiVersion=2022-11-28#list-installations-for-the-authenticated-app
+     * 
+     * @param jwtToken - The JWT token for authentication
+     * @param enterprise - enterprise slug/name to match against
+     * @returns Promise<number> - The installation ID
+     * @throws Error if no enterprise installation found, multiple found without specific name, or API errors
+     */
+    async getEnterpriseInstallationId(jwtToken: string, enterprise: string): Promise<number> {
+        const groupName = `##[group]Get Installation ID for enterprise ${enterprise}`;
+        console.log(`##[group]${groupName}`);
+        console.log('Searching for enterprise installation across all app installations (workaround - no direct API available)');
+
+        let page = 1;
+        const perPage = 100; // Maximum allowed by GitHub API
+        let enterpriseInstallations: any[] = [];
+        
+        try {
+            while (true) {
+                const url = `${this.baseUrl}/app/installations?per_page=${perPage}&page=${page}`;
+                tl.debug(`Installation list request URL: ${url} (page ${page})`);
+
+                const response = await this.client.get(url, {
+                    headers: {
+                        'Authorization': `Bearer ${jwtToken}`
+                    }
+                });
+
+                this.dumpHeaders(response.headers);
+                tl.debug(`Response payload (page ${page}): ${JSON.stringify(response.data)}`);
+
+                const installations = response.data;
+                console.log(`Processing page ${page} of installations (found ${installations.length} installations on this page)`);
+
+                // Filter for enterprise installations
+                const enterpriseInstallationsOnPage = installations.filter((installation: any) => 
+                    installation.target_type === 'Enterprise'
+                );
+
+                if (enterpriseInstallationsOnPage.length > 0) {
+                    console.log(`Found ${enterpriseInstallationsOnPage.length} enterprise installations on page ${page}`);
+                    enterpriseInstallations = enterpriseInstallations.concat(enterpriseInstallationsOnPage);
+                }
+
+                // Check if we've reached the end of results
+                if (installations.length < perPage) {
+                    console.log(`Reached end of installations (page ${page} returned ${installations.length} results)`);
+                    break;
+                }
+
+                // Check rate limiting and wait if necessary
+                const rateLimitRemaining = parseInt(response.headers['x-ratelimit-remaining'] || '0');
+                const rateLimitReset = parseInt(response.headers['x-ratelimit-reset'] || '0');
+                const currentTime = Math.floor(Date.now() / 1000);
+                
+                if (rateLimitRemaining < 10 && (rateLimitReset - currentTime) <= 300) {
+                    // Less than 10 requests remaining and reset is within 5 minutes - wait
+                    const waitTime = (rateLimitReset - currentTime) + 10; // Add 10 seconds buffer
+                    console.log(`Rate limit approaching. Waiting ${waitTime} seconds before next request.`);
+                    await new Promise(resolve => setTimeout(resolve, waitTime * 1000));
+                } else if (rateLimitRemaining === 0) {
+                    const resetTime = new Date(rateLimitReset * 1000).toISOString();
+                    throw new Error(`GitHub API rate limit exceeded. Reset time: ${resetTime}. Please try again later.`);
+                }
+
+                page++;
+            }
+
+            console.log(`Found ${enterpriseInstallations.length} total enterprise installations across all pages`);
+
+            if (enterpriseInstallations.length === 0) {
+                throw new Error(`No enterprise installations found for GitHub App. Please verify the app is installed at the enterprise level for: ${enterprise}`);
+            }
+
+            // Filter by specific enterprise name/slug if provided
+            let matchingInstallations = enterpriseInstallations.filter((installation: any) => 
+                installation.account.login.toLowerCase() === enterprise.toLowerCase()
+            );
+
+            if (matchingInstallations.length === 0) {
+                const availableEnterprises = enterpriseInstallations.map((inst: any) => inst.account.login).join(', ');
+                throw new Error(`Enterprise installation not found for '${enterprise}'. Available enterprise installations: ${availableEnterprises}`);
+            }
+
+            if (matchingInstallations.length > 1) {
+                console.log(`Warning: Found multiple installations for enterprise '${enterprise}'. Using the first one.`);
+            }
+
+            const installation = matchingInstallations[0];
+            const installationId = installation.id;
+
+            console.log(`Enterprise installation found: ${installation.account.login} (ID: ${installationId})`);
+            
+            // Log additional details for debugging
+            tl.debug(`Installation target type: ${installation.target_type}`);
+            tl.debug(`Installation app slug: ${installation.app_slug || 'N/A'}`);
+            
+            const permissionsCsv = this.formatPermissions(installation.permissions || {});
+            console.log(`Permissions: ${permissionsCsv}`);
+
+            return installationId;
+
+        } catch (err: any) {
+            let message = '';
+            if (err.response && err.response.status === 401) {
+                message = `GitHub App JWT authentication failed. Please verify the app credentials.`;
+            } else if (err.response && err.response.status === 403) {
+                message = `GitHub App does not have permission to list installations. Please verify the app permissions.`;
+            } else if (err.message.includes('rate limit') || err.message.includes('Rate limit')) {
+                throw err; // Re-throw rate limit errors as-is
+            } else {
+                message = err.message || `Failed to get enterprise installation ID: ${err}`;
+            }
+            
+            if (message !== err.message) {
+                throw new Error(message);
+            } else {
+                throw err;
+            }
+        } finally {
+            console.log('##[endgroup]')
+        }
     }
 
     /**

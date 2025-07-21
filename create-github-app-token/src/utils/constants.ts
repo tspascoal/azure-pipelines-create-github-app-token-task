@@ -9,3 +9,4 @@ export const BASE_URL_TASK_VARNAME = 'baseUrl';
 
 export const ACCOUNT_TYPE_USER = 'user';
 export const ACCOUNT_TYPE_ORG = 'org';
+export const ACCOUNT_TYPE_ENTERPRISE = 'enterprise';
