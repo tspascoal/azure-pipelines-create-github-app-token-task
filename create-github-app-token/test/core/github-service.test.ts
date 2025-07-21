@@ -196,6 +196,234 @@ mockprivatekeydata
         service.getInstallationId(mockJwtToken, owner, "org")
       ).rejects.toThrow('Failed to get installation ID:');
     });
+
+    describe('enterprise installation', () => {
+      const enterprise = 'my-enterprise';
+      const installationId = 54321;
+      const mockEnterpriseInstallation = {
+        id: installationId,
+        target_type: 'Enterprise',
+        account: {
+          login: enterprise
+        },
+        app_slug: 'test-app',
+        permissions: {
+          contents: 'read',
+          issues: 'write'
+        }
+      };
+
+      it('should get installation ID for enterprise', async () => {
+        nock(baseUrl)
+          .get('/app/installations?per_page=100&page=1')
+          .reply(200, [
+            {
+              id: 11111,
+              target_type: 'Organization',
+              account: { login: 'some-org' }
+            },
+            mockEnterpriseInstallation,
+            {
+              id: 22222,
+              target_type: 'User',
+              account: { login: 'some-user' }
+            }
+          ]);
+
+        const service = new GitHubService(baseUrl);
+        const result = await service.getInstallationId(mockJwtToken, enterprise, 'enterprise');
+
+        expect(result).toBe(installationId);
+      });
+
+      it('should handle multiple pages when searching for enterprise', async () => {
+        // First page with no enterprise installations
+        nock(baseUrl)
+          .get('/app/installations?per_page=100&page=1')
+          .reply(200, Array(100).fill({
+            id: 11111,
+            target_type: 'Organization',
+            account: { login: 'some-org' }
+          }));
+
+        // Second page with enterprise installation
+        nock(baseUrl)
+          .get('/app/installations?per_page=100&page=2')
+          .reply(200, [
+            mockEnterpriseInstallation,
+            {
+              id: 22222,
+              target_type: 'User',
+              account: { login: 'some-user' }
+            }
+          ]);
+
+        const service = new GitHubService(baseUrl);
+        const result = await service.getInstallationId(mockJwtToken, enterprise, 'enterprise');
+
+        expect(result).toBe(installationId);
+      });
+
+      it('should handle case-insensitive enterprise matching', async () => {
+        nock(baseUrl)
+          .get('/app/installations?per_page=100&page=1')
+          .reply(200, [mockEnterpriseInstallation]);
+
+        const service = new GitHubService(baseUrl);
+        const result = await service.getInstallationId(mockJwtToken, 'MY-ENTERPRISE', 'enterprise');
+
+        expect(result).toBe(installationId);
+      });
+
+      it('should throw error when no enterprise installations found', async () => {
+        nock(baseUrl)
+          .get('/app/installations?per_page=100&page=1')
+          .reply(200, [
+            {
+              id: 11111,
+              target_type: 'Organization',
+              account: { login: 'some-org' }
+            },
+            {
+              id: 22222,
+              target_type: 'User',
+              account: { login: 'some-user' }
+            }
+          ]);
+
+        const service = new GitHubService(baseUrl);
+        
+        await expect(
+          service.getInstallationId(mockJwtToken, enterprise, 'enterprise')
+        ).rejects.toThrow(`No enterprise installations found for GitHub App. Please verify the app is installed at the enterprise level for: ${enterprise}`);
+      });
+
+      it('should throw error when specific enterprise not found', async () => {
+        nock(baseUrl)
+          .get('/app/installations?per_page=100&page=1')
+          .reply(200, [
+            {
+              id: 33333,
+              target_type: 'Enterprise',
+              account: { login: 'other-enterprise' }
+            }
+          ]);
+
+        const service = new GitHubService(baseUrl);
+        
+        await expect(
+          service.getInstallationId(mockJwtToken, enterprise, 'enterprise')
+        ).rejects.toThrow(`Enterprise installation not found for '${enterprise}'. Available enterprise installations: other-enterprise`);
+      });
+
+      it('should handle rate limiting during pagination', async () => {
+        // First request hits low rate limit but still works
+        nock(baseUrl)
+          .get('/app/installations?per_page=100&page=1')
+          .reply(200, Array(100).fill({
+            id: 11111,
+            target_type: 'Organization',
+            account: { login: 'some-org' }
+          }), {
+            'x-ratelimit-remaining': '5',
+            'x-ratelimit-reset': String(Math.floor(Date.now() / 1000) + 120) // Reset in 2 minutes (within 5 min threshold)
+          });
+
+        // Second request should succeed after waiting
+        nock(baseUrl)
+          .get('/app/installations?per_page=100&page=2')
+          .reply(200, [mockEnterpriseInstallation]);
+
+        const service = new GitHubService(baseUrl);
+        
+        // Mock setTimeout to avoid actually waiting
+        const originalSetTimeout = global.setTimeout;
+        const mockSetTimeout = jest.fn((callback: Function) => {
+          callback();
+          return {} as any;
+        }) as any;
+        global.setTimeout = mockSetTimeout;
+
+        try {
+          const result = await service.getInstallationId(mockJwtToken, enterprise, 'enterprise');
+          expect(result).toBe(installationId);
+          expect(mockSetTimeout).toHaveBeenCalled();
+        } finally {
+          global.setTimeout = originalSetTimeout;
+        }
+      }, 15000); // Increased timeout
+
+      it('should throw error when rate limit exceeded', async () => {
+        // First page has some installations but hits rate limit
+        nock(baseUrl)
+          .get('/app/installations?per_page=100&page=1')
+          .reply(200, Array(100).fill({
+            id: 11111,
+            target_type: 'Organization',
+            account: { login: 'some-org' }
+          }), {
+            'x-ratelimit-remaining': '0',
+            'x-ratelimit-reset': String(Math.floor(Date.now() / 1000) + 3600) // Reset in 1 hour
+          });
+
+        const service = new GitHubService(baseUrl);
+        
+        await expect(
+          service.getEnterpriseInstallationId(mockJwtToken, enterprise)
+        ).rejects.toThrow('GitHub API rate limit exceeded');
+      });
+
+      it('should handle 401 authentication error', async () => {
+        nock(baseUrl)
+          .get('/app/installations?per_page=100&page=1')
+          .reply(401, { message: 'Unauthorized' });
+
+        const service = new GitHubService(baseUrl);
+        
+        await expect(
+          service.getInstallationId(mockJwtToken, enterprise, 'enterprise')
+        ).rejects.toThrow('GitHub App JWT authentication failed. Please verify the app credentials.');
+      });
+
+      it('should handle 403 permission error', async () => {
+        nock(baseUrl)
+          .get('/app/installations?per_page=100&page=1')
+          .reply(403, { message: 'Forbidden' });
+
+        const service = new GitHubService(baseUrl);
+        
+        await expect(
+          service.getInstallationId(mockJwtToken, enterprise, 'enterprise')
+        ).rejects.toThrow('GitHub App does not have permission to list installations. Please verify the app permissions.');
+      });
+
+      it('should handle multiple enterprise installations with warning', async () => {
+        const mockInstallations = [
+          {
+            id: 55555,
+            target_type: 'Enterprise',
+            account: { login: enterprise },
+            permissions: { contents: 'read' }
+          },
+          {
+            id: 66666,
+            target_type: 'Enterprise',
+            account: { login: enterprise }, // Same enterprise, multiple installations
+            permissions: { contents: 'write' }
+          }
+        ];
+
+        nock(baseUrl)
+          .get('/app/installations?per_page=100&page=1')
+          .reply(200, mockInstallations);
+
+        const service = new GitHubService(baseUrl);
+        const result = await service.getInstallationId(mockJwtToken, enterprise, 'enterprise');
+
+        // Should return the first matching installation
+        expect(result).toBe(55555);
+      });
+    });
   });
 
   describe('getInstallationToken', () => {
