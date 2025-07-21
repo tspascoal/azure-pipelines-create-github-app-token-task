@@ -80,7 +80,6 @@ describe('validation utilities', () => {
       expect(() => validateAccountType('User')).toThrow('Invalid account type User. Must be one of: org, user');
     });
   });
-});
 
   describe('Error message consistency', () => {
     it('should provide consistent error format for invalid account type', () => {
@@ -106,4 +105,6 @@ describe('validation utilities', () => {
       // The actual error is thrown by the GitHubService when validation fails
     });
   });
+});
+  
 
