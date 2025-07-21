@@ -29,6 +29,10 @@ jobs:
       run: npm ci
       working-directory: create-github-app-token
 
+    - name: Run tests
+      run: npm test
+      working-directory: create-github-app-token
+
     - name: Build
       run: npm run build
       working-directory: create-github-app-token

@@ -6,3 +6,5 @@ lib
 *.vsix
 *.pem
 .taskkey
+
+coverage/

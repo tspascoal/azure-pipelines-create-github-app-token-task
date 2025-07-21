@@ -23,6 +23,10 @@ steps:
   displayName: 'Install dependencies'
   workingDirectory: create-github-app-token
 
+- script: npm test
+  displayName: 'Run unit tests'
+  workingDirectory: create-github-app-token
+
 - script: |
     npm run clean
     npm run build
