@@ -8,3 +8,6 @@ lib
 .taskkey
 
 coverage/
+
+# Test results
+test-results/

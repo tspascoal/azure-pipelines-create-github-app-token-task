@@ -223,7 +223,25 @@ For comprehensive guidance, refer to the [official Microsoft documentation on cr
 
 Both GitHub Actions as well as Azure Pipelines are provided to execute continuous integration. (they are triggered by either a pull request or a push against the `main` branch).
 
-The CI Action packages the extension and uploads it as an artifact, the extension is packaged as `ENTER YOUR PUBLISHER HERE` publisher. You should use your own publisher by setting a variable with the name `PUBLISHER` on the CI pipeline.
+The CI workflows include the following features:
+
+- **Build and Test**: Compile TypeScript, run unit tests, and package the extension
+- **Unit Test Results**: Both CI systems are configured to publish unit test results:
+  - **GitHub Actions**: Uses `dorny/test-reporter` to publish test results as pull request comments with detailed test summaries
+  - **Azure Pipelines**: Uses `PublishTestResults@2` task to display test results in the pipeline run with integrated reporting
+- **Code Coverage Results**: Both CI systems are configured to publish code coverage reports:
+  - **GitHub Actions**: Uses `5monkeys/cobertura-action` to publish coverage results as pull request comments with coverage summaries and line-by-line coverage information
+  - **Azure Pipelines**: Uses `PublishCodeCoverageResults@1` task to display coverage results in the pipeline run with detailed coverage reports
+- **Test and Coverage Configuration**: Jest is configured with:
+  - JUnit XML reporting (`jest-junit`) for standardized test result files
+  - Multiple coverage formats including Cobertura XML for CI integration and HTML reports for local viewing
+  - Coverage thresholds set at 80% for branches, functions, lines, and statements
+- **Artifact Publishing**: The extension is packaged and uploaded as an artifact
+
+The extension is packaged as `ENTER YOUR PUBLISHER HERE` publisher. You should use your own publisher by setting a variable with the name `PUBLISHER` on the CI pipeline.
+
+> [!NOTE]
+> Test results and code coverage reports are published even if tests fail, providing visibility into both test outcomes and coverage metrics for successful and failing builds.
 
 ## Contributing
 

@@ -9,7 +9,21 @@ module.exports = {
     '!**/node_modules/**'
   ],
   coverageDirectory: 'coverage',
-  coverageReporters: ['text', 'text-summary', 'lcov', 'html', 'json'],
+  coverageReporters: ['text', 'text-summary', 'lcov', 'html', 'json', 'cobertura'],
+  
+  // JUnit XML reporting for CI systems
+  reporters: [
+    'default',
+    ['jest-junit', {
+      outputDirectory: 'test-results',
+      outputName: 'junit.xml',
+      ancestorSeparator: ' › ',
+      uniqueOutputName: 'false',
+      suiteNameTemplate: '{filepath}',
+      classNameTemplate: '{classname}',
+      titleTemplate: '{title}'
+    }]
+  ],
   coveragePathIgnorePatterns: [
     '/node_modules/',
     '/test/',
