@@ -36,8 +36,8 @@ jobs:
       working-directory: create-github-app-token
 
     - name: Publish Test Results
-      uses: dorny/test-reporter@dc3a92680fcc15842eef52e8c4606ea7ce6bd3f3
-      if: success() || failure()    # run this step even if tests failed
+      uses: dorny/test-reporter@dc3a92680fcc15842eef52e8c4606ea7ce6bd3f3 # v2.1.1
+      if: success() || failure()
       with:
         name: Jest Tests
         path: create-github-app-token/test-results/junit.xml
@@ -46,11 +46,10 @@ jobs:
         use-actions-summary: true
 
     - name: Publish Code Coverage Results
-      uses: 5monkeys/cobertura-action@master
-      if: success() || failure()    # run this step even if tests failed
+      uses: 5monkeys/cobertura-action@ee5787cc56634acddedc51f21c7947985531e6eb # v14
+      if: success() || failure()
       with:
         path: create-github-app-token/coverage/cobertura-coverage.xml
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
         minimum_coverage: 80
         fail_below_threshold: false
         show_line: true
