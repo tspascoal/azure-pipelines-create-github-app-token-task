@@ -223,7 +223,19 @@ For comprehensive guidance, refer to the [official Microsoft documentation on cr
 
 Both GitHub Actions as well as Azure Pipelines are provided to execute continuous integration. (they are triggered by either a pull request or a push against the `main` branch).
 
-The CI Action packages the extension and uploads it as an artifact, the extension is packaged as `ENTER YOUR PUBLISHER HERE` publisher. You should use your own publisher by setting a variable with the name `PUBLISHER` on the CI pipeline.
+The CI workflows include the following features:
+
+- **Build and Test**: Compile TypeScript, run unit tests, and package the extension
+- **Unit Test Results**: Both CI systems are configured to publish unit test results:
+  - **GitHub Actions**: Uses `dorny/test-reporter` to publish test results as pull request comments with detailed test summaries
+  - **Azure Pipelines**: Uses `PublishTestResults@2` task to display test results in the pipeline run with integrated reporting
+- **Test Reporting Configuration**: Jest is configured with JUnit XML reporting (`jest-junit`) to generate standardized test result files that both CI systems can consume
+- **Artifact Publishing**: The extension is packaged and uploaded as an artifact
+
+The extension is packaged as `ENTER YOUR PUBLISHER HERE` publisher. You should use your own publisher by setting a variable with the name `PUBLISHER` on the CI pipeline.
+
+> [!NOTE]
+> Test results are published even if tests fail, providing visibility into test outcomes for both successful and failing builds.
 
 ## Contributing
 
