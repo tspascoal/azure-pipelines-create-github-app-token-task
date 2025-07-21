@@ -62,22 +62,26 @@ describe('validation utilities', () => {
     it('should accept valid account types', () => {
       expect(() => validateAccountType(constants.ACCOUNT_TYPE_ORG)).not.toThrow();
       expect(() => validateAccountType(constants.ACCOUNT_TYPE_USER)).not.toThrow();
+      expect(() => validateAccountType(constants.ACCOUNT_TYPE_ENTERPRISE)).not.toThrow();
       expect(() => validateAccountType('org')).not.toThrow();
       expect(() => validateAccountType('user')).not.toThrow();
+      expect(() => validateAccountType('enterprise')).not.toThrow();
     });
 
     it('should reject invalid account types', () => {
-      expect(() => validateAccountType('invalid')).toThrow('Invalid account type invalid. Must be one of: org, user');
-      expect(() => validateAccountType('organization')).toThrow('Invalid account type organization. Must be one of: org, user');
-      expect(() => validateAccountType('userType')).toThrow('Invalid account type userType. Must be one of: org, user');
-      expect(() => validateAccountType('')).toThrow('Invalid account type . Must be one of: org, user');
+      expect(() => validateAccountType('invalid')).toThrow('Invalid account type invalid. Must be one of: org, user, enterprise');
+      expect(() => validateAccountType('organization')).toThrow('Invalid account type organization. Must be one of: org, user, enterprise');
+      expect(() => validateAccountType('userType')).toThrow('Invalid account type userType. Must be one of: org, user, enterprise');
+      expect(() => validateAccountType('')).toThrow('Invalid account type . Must be one of: org, user, enterprise');
     });
 
     it('should be case sensitive', () => {
-      expect(() => validateAccountType('ORG')).toThrow('Invalid account type ORG. Must be one of: org, user');
-      expect(() => validateAccountType('USER')).toThrow('Invalid account type USER. Must be one of: org, user');
-      expect(() => validateAccountType('Org')).toThrow('Invalid account type Org. Must be one of: org, user');
-      expect(() => validateAccountType('User')).toThrow('Invalid account type User. Must be one of: org, user');
+      expect(() => validateAccountType('ORG')).toThrow('Invalid account type ORG. Must be one of: org, user, enterprise');
+      expect(() => validateAccountType('USER')).toThrow('Invalid account type USER. Must be one of: org, user, enterprise');
+      expect(() => validateAccountType('ENTERPRISE')).toThrow('Invalid account type ENTERPRISE. Must be one of: org, user, enterprise');
+      expect(() => validateAccountType('Org')).toThrow('Invalid account type Org. Must be one of: org, user, enterprise');
+      expect(() => validateAccountType('User')).toThrow('Invalid account type User. Must be one of: org, user, enterprise');
+      expect(() => validateAccountType('Enterprise')).toThrow('Invalid account type Enterprise. Must be one of: org, user, enterprise');
     });
   });
 
@@ -93,7 +97,7 @@ describe('validation utilities', () => {
 
       testCases.forEach(accountType => {
         expect(() => validateAccountType(accountType))
-          .toThrow(`Invalid account type ${accountType}. Must be one of: org, user`);
+          .toThrow(`Invalid account type ${accountType}. Must be one of: org, user, enterprise`);
       });
     });
 

@@ -43,5 +43,9 @@ describe('constants', () => {
     it('should define organization account type', () => {
       expect(constants.ACCOUNT_TYPE_ORG).toBe('org');
     });
+
+    it('should define enterprise account type', () => {
+      expect(constants.ACCOUNT_TYPE_ENTERPRISE).toBe('enterprise');
+    });
   });
 });

@@ -91,6 +91,12 @@ async function run() {
 
         const forceRepoScope = endpoint.parameters['forceRepoScope']?.toLowerCase() === 'true';
         if (forceRepoScope) {
+          // Enterprise accounts cannot use forceRepoScope
+          if (accountType.toLowerCase() === constants.ACCOUNT_TYPE_ENTERPRISE) {
+            tl.setResult(tl.TaskResult.Failed, 'Enterprise account type cannot use forceRepoScope. Please set forceRepoScope to false in the service connection.');
+            return;
+          }
+
           console.log('Forcing repo scope)');
           console.log(`Repo Provider: ${provider}`);
 
@@ -147,6 +153,23 @@ async function run() {
     // If repositories is define we don't really need account type
     if (!repositoriesList) {
       validateAccountType(accountType);
+    }
+
+    // Enterprise-specific validation
+    if (accountType.toLowerCase() === constants.ACCOUNT_TYPE_ENTERPRISE) {
+      // Enterprise accounts require the owner field to be specified
+      if (!owner) {
+        tl.setResult(tl.TaskResult.Failed, 'Owner is required for enterprise account type. Please specify the enterprise slug/name.');
+        return;
+      }
+
+      // Enterprise accounts cannot use repository scoping
+      if (repositoriesList) {
+        tl.setResult(tl.TaskResult.Failed, 'Enterprise account type does not support repository scoping. Remove the repositories input.');
+        return;
+      }
+
+      console.log(`Using enterprise account: ${owner}`);
     }
 
     if (!appClientId) {
