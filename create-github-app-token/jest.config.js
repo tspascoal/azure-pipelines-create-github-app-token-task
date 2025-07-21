@@ -10,6 +10,20 @@ module.exports = {
   ],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'text-summary', 'lcov', 'html', 'json'],
+  
+  // JUnit XML reporting for CI systems
+  reporters: [
+    'default',
+    ['jest-junit', {
+      outputDirectory: 'test-results',
+      outputName: 'junit.xml',
+      ancestorSeparator: ' › ',
+      uniqueOutputName: 'false',
+      suiteNameTemplate: '{filepath}',
+      classNameTemplate: '{classname}',
+      titleTemplate: '{title}'
+    }]
+  ],
   coveragePathIgnorePatterns: [
     '/node_modules/',
     '/test/',

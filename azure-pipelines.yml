@@ -27,6 +27,15 @@ steps:
   displayName: 'Run unit tests'
   workingDirectory: create-github-app-token
 
+- task: PublishTestResults@2
+  displayName: 'Publish Test Results'
+  condition: succeededOrFailed()  # publish results even if tests failed
+  inputs:
+    testResultsFormat: 'JUnit'
+    testResultsFiles: 'create-github-app-token/test-results/junit.xml'
+    testRunTitle: 'Jest Unit Tests'
+    publishRunAttachments: true
+
 - script: |
     npm run clean
     npm run build
