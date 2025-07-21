@@ -144,9 +144,7 @@ export class GitHubService {
      * It logs details about the token creation process, including repository selection and permissions.
      * The token is scoped based on the provided repositories or the entire installation if no repositories are specified.
      */
-    async getInstallationToken(jwtToken: string, installationId: number, repositories: string[] = [], permissions?: { [key: string]: string }): Promise<{
-        token: string; expiresAt: string 
-}> {
+    async getInstallationToken(jwtToken: string, installationId: number, repositories: string[] = [], permissions?: { [key: string]: string }): Promise<{ token: string; expiresAt: string }> {
         let groupName = '';
         let token = '';
         let expiresAt = '';
