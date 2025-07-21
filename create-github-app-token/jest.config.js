@@ -9,7 +9,7 @@ module.exports = {
     '!**/node_modules/**'
   ],
   coverageDirectory: 'coverage',
-  coverageReporters: ['text', 'text-summary', 'lcov', 'html', 'json'],
+  coverageReporters: ['text', 'text-summary', 'lcov', 'html', 'json', 'cobertura'],
   
   // JUnit XML reporting for CI systems
   reporters: [

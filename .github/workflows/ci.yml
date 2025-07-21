@@ -45,6 +45,19 @@ jobs:
         fail-on-error: true
         use-actions-summary: true
 
+    - name: Publish Code Coverage Results
+      uses: 5monkeys/cobertura-action@master
+      if: success() || failure()    # run this step even if tests failed
+      with:
+        path: create-github-app-token/coverage/cobertura-coverage.xml
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        minimum_coverage: 80
+        fail_below_threshold: false
+        show_line: true
+        show_branch: true
+        show_class_names: true
+        only_changed_files: false
+
     - name: Build
       run: npm run build
       working-directory: create-github-app-token

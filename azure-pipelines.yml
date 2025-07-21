@@ -36,6 +36,15 @@ steps:
     testRunTitle: 'Jest Unit Tests'
     publishRunAttachments: true
 
+- task: PublishCodeCoverageResults@1
+  displayName: 'Publish Code Coverage Results'
+  condition: succeededOrFailed()  # publish results even if tests failed
+  inputs:
+    codeCoverageTool: 'Cobertura'
+    summaryFileLocation: 'create-github-app-token/coverage/cobertura-coverage.xml'
+    reportDirectory: 'create-github-app-token/coverage/lcov-report'
+    failIfCoverageEmpty: false
+
 - script: |
     npm run clean
     npm run build
