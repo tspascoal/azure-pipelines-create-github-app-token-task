@@ -10,7 +10,7 @@
     "version": {
         "Major": 1,
         "Minor": 0,
-        "Patch": 4
+        "Patch": 5
     },
     "instanceNameFormat": "Create GitHub App Installation Token",
     "inputs": [
@@ -25,10 +25,10 @@
         {
             "name": "owner",
             "type": "string",
-            "label": "Owner Name (organization or user)",
+            "label": "Owner Name (organization, user, or enterprise)",
             "defaultValue": "",
             "required": true,
-            "helpMarkDown": "The GitHub organization or user name where the app is installed"
+            "helpMarkDown": "The GitHub organization name, user name, or enterprise slug where the app is installed. Required for enterprise account types."
         },
         {
             "name": "accountType",
@@ -36,10 +36,11 @@
             "label": "Account Type",
             "defaultValue": "org",
             "required": false,
-            "helpMarkDown": "The type of account to use. Can be either 'organization' or 'user'. (required if repositories is not set)",
+            "helpMarkDown": "The type of account to use. Can be 'organization', 'user', or 'enterprise'. (required if repositories is not set)",
             "options": {
                 "org": "organization account",
-                "user": "user account"
+                "user": "user account",
+                "enterprise": "enterprise account"
             }
         },
         {

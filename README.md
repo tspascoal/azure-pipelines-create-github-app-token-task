@@ -8,7 +8,7 @@ Azure Pipelines extension to create a GitHub App installation tokens that can be
 ## Features
 
 - Generates GitHub App installation tokens for API authentication
-- Supports organization-wide or repository-specific tokens
+- Supports organization-wide, user-level, or enterprise-level tokens
 - Provides multiple authentication options (service connection or direct inputs)
 - Handles proxy configurations through environment variables
 - Secure handling of private keys and credentials
@@ -16,10 +16,10 @@ Azure Pipelines extension to create a GitHub App installation tokens that can be
 
 ## Prerequisites
 
-1. A GitHub App created and installed in your organization
+1. A GitHub App created and installed in your organization, user account, or enterprise
 2. The GitHub App's private key (PEM format)
 3. The GitHub App client ID
-4. The GitHub App must be installed in the organization where you want to generate tokens
+4. The GitHub App must be installed in the organization, user account, or enterprise where you want to generate tokens
 
 ## Configuration
 
@@ -64,9 +64,9 @@ steps:
 | Parameter | Required | Description |
 |-----------|----------|-------------|
 | githubAppConnection | No | The GitHub App connection to use (preferred method) |
-| owner | No | The GitHub organization name or user account where the app is installed. If not provided, it will be automatically fetched from the `Build.Repository.Name` variable. |
-| accountType | No | The type of account to use for the token. Options: `org` (organization) or `user` (user account). Default is `org`. |
-| repositories | No | Comma-separated list of repositories to scope the token to. If empty, token will be scoped to all repositories (in which the app has access to) |
+| owner | No | The GitHub organization name, user account, or enterprise slug where the app is installed. **Required for enterprise account type.** If not provided (for org/user), it will be automatically fetched from the `Build.Repository.Name` variable. |
+| accountType | No | The type of account to use for the token. Options: `org` (organization), `user` (user account), or `enterprise` (enterprise account). Default is `org`. |
+| repositories | No | Comma-separated list of repositories to scope the token to. If empty, token will be scoped to all repositories (in which the app has access to). **Not allowed for enterprise account type.** |
 | appClientId | No* | The GitHub App ID (required if not using service connection) |
 | certificate | No* | The PEM certificate content (required if not using service connection) |
 | certificateFile | No | Alternative to certificate - filename containing the PEM content |
@@ -189,6 +189,41 @@ steps:
     permissions: '{"contents":"read","pulls":"write","issues":"write"}'  # Restricts token permissions
 ```
 
+### Enterprise Installation Token
+
+For GitHub Apps installed at the enterprise level:
+
+```yaml
+steps:
+- task: create-github-app-token@1
+  name: enterpriseToken
+  inputs:
+    githubAppConnection: 'MyGitHubAppConnection'
+    accountType: 'enterprise'
+    owner: 'my-enterprise'  # Enterprise slug/name (required for enterprise)
+- bash: |
+    gh api \
+    --method GET -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" \
+    /enterprises/my-enterprise
+  displayName: 'Access enterprise using GitHub CLI'
+  env:
+    GH_TOKEN: $(enterpriseToken.installationToken)
+```
+
+### Enterprise with Direct Certificate Input
+
+```yaml
+steps:
+- task: create-github-app-token@1
+  inputs:
+    accountType: 'enterprise'
+    owner: 'my-enterprise'  # Required for enterprise account type
+    appClientId: 'lv2313qqwqeqweqw'
+    certificate: '$(githubAppPem)'
+    # Note: repositories input not allowed for enterprise account type
+    # Note: forceRepoScope not allowed for enterprise account type
+```
+
 ## Proxy Support
 
 The task automatically detects and uses proxy settings from the following environment variables:
@@ -209,6 +244,30 @@ Common issues and solutions:
    - If your GitHub App has "read" access to contents, you cannot request "write" access
    - If you are trying to request `admin:read` permission, the app needs to have `admin:read` or `admin:org` in the GitHub App configuration
    - The token can only have equal or lower permissions than what is configured in the GitHub App settings
+
+### Enterprise-Specific Issues
+
+5. **Enterprise installation not found**: 
+   - Verify the GitHub App is installed at the enterprise level (not just organization level)
+   - Ensure the `owner` parameter contains the correct enterprise slug/name
+   - Check that the GitHub App has permissions to access enterprise resources
+6. **Multiple enterprise installations found**: If you have access to multiple enterprises, specify the exact enterprise slug in the `owner` parameter
+7. **Enterprise account type restrictions**:
+   - Cannot use `repositories` parameter with enterprise account type (tokens are enterprise-scoped)
+   - Cannot use `forceRepoScope` in service connections with enterprise account type
+   - The `owner` parameter is mandatory for enterprise account type
+8. **Rate limiting during installation lookup**: Enterprise installations use pagination which may hit rate limits with many installations. The task automatically handles rate limiting by waiting if the reset time is within 5 minutes.
+
+### Account Type Differences
+
+| Feature | Organization | User | Enterprise |
+|---------|-------------|------|------------|
+| Repository scoping | ✅ Supported | ✅ Supported | ❌ Not supported |
+| forceRepoScope | ✅ Supported | ✅ Supported | ❌ Not supported |
+| Owner parameter | Optional* | Optional* | **Required** |
+| Direct API lookup | ✅ Yes | ✅ Yes | ❌ Uses pagination workaround |
+
+*Owner is optional for org/user if using GitHub repository provider (auto-extracted from Build.Repository.Name)
 
 > [!TIP]
 > If you expand the task logs, you can see extra info like the token permissions and repo access. (If you run the pipeline in debug mode it will have extra info as well).

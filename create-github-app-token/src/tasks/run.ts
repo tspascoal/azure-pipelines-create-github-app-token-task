@@ -13,17 +13,22 @@ async function run() {
     const provider = tl.getVariable('Build.Repository.Provider');
     let owner = tl.getInput('owner', false)
     const nwo = tl.getVariable('Build.Repository.Name')!;
+    const accountType = tl.getInput('accountType', false) || constants.ACCOUNT_TYPE_ORG;
 
     // If owner is not provided,get it from the repository name (provider has to be GitHub)
     if (!owner) {
-      failIfProviderIsNotGitHub(provider, "If owner is not provided, the repository provider must be GitHub");
-      const extractedOwner = getOwnerName(nwo);
-      console.log(`Extracted owner from Build.Repository.Name: ${extractedOwner}`);
+      if(accountType != constants.ACCOUNT_TYPE_ENTERPRISE) {
+        failIfProviderIsNotGitHub(provider, "If owner is not provided, the repository provider must be GitHub");
+        const extractedOwner = getOwnerName(nwo);
+        console.log(`Extracted owner from Build.Repository.Name: ${extractedOwner}`);
 
-      owner = extractedOwner;
+        owner = extractedOwner;
+      } else {
+        tl.setResult(tl.TaskResult.Failed, 'Enterprise account type requires an owner to be specified.');
+        return;
+      }
     }
 
-    const accountType = tl.getInput('accountType', false) || constants.ACCOUNT_TYPE_ORG;
     let appClientId = tl.getInput('appClientId', false) || undefined;
     const privateKeyPath = tl.getInput('certificateFile', false) || '';
     const privateKeyInput = tl.getInput('certificate', false) || '';
@@ -91,7 +96,13 @@ async function run() {
 
         const forceRepoScope = endpoint.parameters['forceRepoScope']?.toLowerCase() === 'true';
         if (forceRepoScope) {
-          console.log('Forcing repo scope)');
+          // Enterprise accounts cannot use forceRepoScope
+          if (accountType.toLowerCase() === constants.ACCOUNT_TYPE_ENTERPRISE) {
+            tl.setResult(tl.TaskResult.Failed, 'Enterprise account type cannot use forceRepoScope. Please set forceRepoScope to false in the service connection.');
+            return;
+          }
+
+          console.log('Forcing repo scope');
           console.log(`Repo Provider: ${provider}`);
 
           failIfProviderIsNotGitHub(provider, `Forcing repo scope is only supported for GitHub repositories. Repo provider is ${provider}`);
@@ -149,6 +160,23 @@ async function run() {
       validateAccountType(accountType);
     }
 
+    // Enterprise-specific validation
+    if (accountType.toLowerCase() === constants.ACCOUNT_TYPE_ENTERPRISE) {
+      // Enterprise accounts require the owner field to be specified
+      if (!owner) {
+        tl.setResult(tl.TaskResult.Failed, 'Enterprise account type requires an owner to be specified.');
+        return;
+      }
+
+      // Enterprise accounts cannot use repository scoping
+      if (repositoriesList) {
+        tl.setResult(tl.TaskResult.Failed, 'Enterprise account type does not support repository scoping. Remove the repositories input.');
+        return;
+      }
+
+      console.log(`Using enterprise account: ${owner}`);
+    }
+
     if (!appClientId) {
       tl.setResult(tl.TaskResult.Failed, 'App ID not provided. Please configure either a GitHub App service connection or app ID input.');
       return
@@ -165,8 +193,7 @@ async function run() {
       repositories = repositoriesList.split(',').map(repo => repo.trim());
     }
 
-    const isOrg = accountType.toLowerCase() === constants.ACCOUNT_TYPE_ORG;
-    const installationId = await githubService.getInstallationId(jwtToken, owner, isOrg, repositories);
+    const installationId = await githubService.getInstallationId(jwtToken, appClientId, owner, accountType, repositories);
     console.log(`Found installation ID: ${installationId}`);
 
     const { token, expiresAt } = await githubService.getInstallationToken(jwtToken, installationId, repositories, permissions);

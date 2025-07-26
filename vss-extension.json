@@ -2,7 +2,7 @@
     "manifestVersion": 1,
     "id": "create-github-app-token",
     "name": "GitHub App Token Generator",
-    "version": "1.0.5",
+    "version": "1.0.6",
     "publisher": "INSERT YOUR PUBLISHER HERE",
     "public": false,
     "targets": [
@@ -99,7 +99,7 @@
                             {
                                 "id": "forceRepoScope",
                                 "name": "Force Scope to current repository",
-                                "description": "If true, the token will be scoped to the current repository (only works for GitHub repositories. Will faild if set to true and repository is not a GitHub repository)",
+                                "description": "If true, the token will be scoped to the current repository (only works for GitHub repositories and is not allowed for enterprise account types. Will fail if set to true and repository is not a GitHub repository or if using enterprise account type)",
                                 "inputMode": "checkbox",
                                 "isConfidential": false,
                                 "validation": {

@@ -8,6 +8,7 @@ lib
 .taskkey
 
 coverage/
+smoke-tests/
 
 # Test results
 test-results/
