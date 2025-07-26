@@ -4,6 +4,7 @@ import * as jwt from 'jsonwebtoken';
 import { ProxyConfig } from './proxy-config';
 import { validateRepositoryName } from '../utils/validation';
 import * as constants from '../utils/constants';
+import { VERSION, USER_AGENT } from '../utils/version';
 
 export interface GitHubServiceOptions {
     proxy?: ProxyConfig;
@@ -21,7 +22,8 @@ export class GitHubService {
 
         const axiosOptions: any = {
             headers: {
-                'Accept': 'application/vnd.github.v3+json'
+                'Accept': 'application/vnd.github.v3+json',
+                'User-Agent': `${USER_AGENT}/${VERSION}`
             }
         };
 

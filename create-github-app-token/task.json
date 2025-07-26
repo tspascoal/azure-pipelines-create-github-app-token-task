@@ -10,7 +10,7 @@
     "version": {
         "Major": 1,
         "Minor": 0,
-        "Patch": 5
+        "Patch": 6
     },
     "instanceNameFormat": "Create GitHub App Installation Token",
     "inputs": [
@@ -20,7 +20,7 @@
             "label": "GitHub App Connection",
             "defaultValue": "",
             "required": false,
-            "helpMarkDown": "The GitHub App connection to use. If not set, the other inputs will be used instead. This is the preferred way to use this task.",
+            "helpMarkDown": "The GitHub App connection to use. If not set, the other inputs will be used instead. This is the preferred way to use this task."
         },
         {
             "name": "owner",
