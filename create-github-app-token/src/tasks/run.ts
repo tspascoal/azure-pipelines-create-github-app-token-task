@@ -102,7 +102,7 @@ async function run() {
             return;
           }
 
-          console.log('Forcing repo scope)');
+          console.log('Forcing repo scope');
           console.log(`Repo Provider: ${provider}`);
 
           failIfProviderIsNotGitHub(provider, `Forcing repo scope is only supported for GitHub repositories. Repo provider is ${provider}`);
