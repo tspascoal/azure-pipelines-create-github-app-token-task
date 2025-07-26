@@ -104,7 +104,7 @@ describe('run task logic', () => {
 
       expect(MockedGitHubService).toHaveBeenCalledWith('https://api.github.com/', { proxy: mockProxyConfig });
       expect(mockGitHubService.generateJWT).toHaveBeenCalledWith('test-app-id', 'mock-pem-key');
-      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'test-org', "org", []);
+      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'test-app-id', 'test-org', "org", []);
       expect(mockGitHubService.getInstallationToken).toHaveBeenCalledWith('mock.jwt.token', 12345, [], undefined);
       
       // Verify output variables are set
@@ -131,7 +131,7 @@ describe('run task logic', () => {
 
       // Should generate JWT and proceed through the flow
       expect(mockGitHubService.generateJWT).toHaveBeenCalledWith('test-app-id', 'mock-pem-key');
-      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'test-org', "org", []);
+      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'test-app-id', 'test-org', "org", []);
       expect(mockGitHubService.getInstallationToken).toHaveBeenCalledWith('mock.jwt.token', 12345, [], undefined);
 
       // Should set output variables
@@ -168,7 +168,7 @@ describe('run task logic', () => {
       expect(mockGitHubService.generateJWT).toHaveBeenCalledWith('test-app-id', mockPemContent);
 
       // Should proceed through the rest of the flow and set output variables
-      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'test-org', "org", []);
+      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'test-app-id', 'test-org', "org", []);
       expect(mockGitHubService.getInstallationToken).toHaveBeenCalledWith('mock.jwt.token', 12345, [], undefined);
 
       expect(mockedTl.setVariable).toHaveBeenCalledWith(constants.INSTALLATIONID_OUTPUT_VARNAME, '12345', false);
@@ -207,7 +207,7 @@ describe('run task logic', () => {
       await run();
 
       // Verify the extracted owner is used correctly
-      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'auto-owner', "org", []);
+      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'test-app-id', 'auto-owner', "org", []);
       expect(mockGitHubService.getInstallationToken).toHaveBeenCalledWith('mock.jwt.token', 12345, [], undefined);
       
       // Verify successful completion with output variables set
@@ -243,7 +243,7 @@ describe('run task logic', () => {
       await run();
 
       // Verify repositories are parsed and trimmed correctly
-      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'test-org', "org", ['repo1', 'repo2', 'repo3']);
+      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'test-app-id', 'test-org', "org", ['repo1', 'repo2', 'repo3']);
       expect(mockGitHubService.getInstallationToken).toHaveBeenCalledWith('mock.jwt.token', 12345, ['repo1', 'repo2', 'repo3'], undefined);
       
       // Verify successful completion with output variables set
@@ -552,20 +552,29 @@ describe('run task logic', () => {
       await run();
 
       // Should succeed with enterprise account type
-      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'my-enterprise', 'enterprise', []);
+      expect(mockGitHubService.generateJWT).toHaveBeenCalledWith('test-app-id', 'mock-pem-key');
+      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'test-app-id', 'my-enterprise', 'enterprise', []);
+      expect(mockGitHubService.getInstallationToken).toHaveBeenCalledWith('mock.jwt.token', 12345, [], undefined);
+      
+      // Verify output variables are set
       expect(mockedTl.setVariable).toHaveBeenCalledWith(constants.INSTALLATIONID_OUTPUT_VARNAME, '12345', false);
+      expect(mockedTl.setVariable).toHaveBeenCalledWith(constants.INSTALLATION_TOKEN_OUTPUT_VARNAME, 'ghs_mock_installation_token', true);
+      expect(mockedTl.setVariable).toHaveBeenCalledWith(constants.TOKEN_EXPIRATION_OUTPUT_VARNAME, '2024-01-01T13:00:00Z', false);
+      
+      // Verify task variables are set for post-job cleanup
+      expect(mockedTl.setTaskVariable).toHaveBeenCalledWith(constants.INSTALLATION_TOKEN_OUTPUT_VARNAME, 'ghs_mock_installation_token', true);
+      expect(mockedTl.setTaskVariable).toHaveBeenCalledWith(constants.SKIP_TOKEN_TASK_VARNAME, 'false');
+      expect(mockedTl.setTaskVariable).toHaveBeenCalledWith(constants.BASE_URL_TASK_VARNAME, constants.DEFAULT_API_URL);
+      
+      // Should not fail the task
       expect(mockedTl.setResult).not.toHaveBeenCalled();
     });
 
     it('should fail when enterprise account type is used without owner', async () => {
-      // Test the scenario where owner is initially provided but becomes empty
-      // to specifically test enterprise validation logic
-      let ownerValue = 'temp-owner';
-      
       mockedTl.getInput.mockImplementation((name: string) => {
         switch (name) {
           case 'owner':
-            return ownerValue;
+            return ''; // Empty owner
           case 'accountType':
             return 'enterprise';
           case 'appClientId':
@@ -577,58 +586,23 @@ describe('run task logic', () => {
         }
       });
 
-      // Use GitHub provider to avoid early failure
+      // Use non-GitHub provider to avoid owner auto-extraction
       mockedTl.getVariable.mockImplementation((name: string) => {
         switch (name) {
           case 'Build.Repository.Provider':
-            return 'GitHub';
+            return 'TfsGit';
           case 'Build.Repository.Name':
-            return 'some-org/some-repo';
+            return 'project/repo';
           default:
-            return '';
+            return undefined;
         }
       });
 
-      // Mock the owner to be empty after the initial extraction phase
-      const originalGetInput = mockedTl.getInput;
-      let callCount = 0;
-      mockedTl.getInput.mockImplementation((name: string) => {
-        if (name === 'owner') {
-          callCount++;
-          // Return empty owner on subsequent calls (during validation)
-          return callCount === 1 ? 'some-owner' : '';
-        }
-        return originalGetInput(name);
-      });
-
-      // Actually, let's test this differently - test the validation function directly
-      // or create a scenario that doesn't conflict with owner extraction
-      
-      // Restore original implementation and test a different scenario
-      mockedTl.getInput.mockImplementation((name: string) => {
-        switch (name) {
-          case 'owner':
-            return ''; // Empty owner
-          case 'accountType':
-            return 'enterprise';
-          case 'appClientId':
-            return 'test-app-id';  
-          case 'certificate':
-            return 'mock-pem-key';
-          case 'repositories':
-            return 'repo1'; // Add repositories to bypass account type validation 
-          default:
-            return '';
-        }
-      });
-
-      // Since we have repositories, account type validation is skipped,
-      // but enterprise validation should still run
       await run();
 
       expect(mockedTl.setResult).toHaveBeenCalledWith(
         tl.TaskResult.Failed,
-        'Enterprise account type does not support repository scoping. Remove the repositories input.'
+        'Enterprise account type requires an owner to be specified.'
       );
     });
 
@@ -639,12 +613,12 @@ describe('run task logic', () => {
             return 'my-enterprise';
           case 'accountType':
             return 'enterprise';
-          case 'repositories':
-            return 'repo1,repo2'; // Not allowed for enterprise
           case 'appClientId':
             return 'test-app-id';
           case 'certificate':
             return 'mock-pem-key';
+          case 'repositories':
+            return 'repo1'; // Enterprise doesn't support repository scoping
           default:
             return '';
         }
@@ -666,6 +640,8 @@ describe('run task logic', () => {
             return 'MyGitHubAppConnection';
           case 'accountType':
             return 'enterprise';
+          case 'owner':
+            return 'my-enterprise';
           default:
             return '';
         }
@@ -708,7 +684,21 @@ describe('run task logic', () => {
       await run();
 
       // Should succeed and call GitHub service with enterprise account type
-      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'my-enterprise', 'enterprise', []);
+      expect(mockGitHubService.generateJWT).toHaveBeenCalledWith('test-app-id', 'mock-pem-key');
+      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'test-app-id', 'my-enterprise', 'enterprise', []);
+      expect(mockGitHubService.getInstallationToken).toHaveBeenCalledWith('mock.jwt.token', 12345, [], undefined);
+      
+      // Verify output variables are set
+      expect(mockedTl.setVariable).toHaveBeenCalledWith(constants.INSTALLATIONID_OUTPUT_VARNAME, '12345', false);
+      expect(mockedTl.setVariable).toHaveBeenCalledWith(constants.INSTALLATION_TOKEN_OUTPUT_VARNAME, 'ghs_mock_installation_token', true);
+      expect(mockedTl.setVariable).toHaveBeenCalledWith(constants.TOKEN_EXPIRATION_OUTPUT_VARNAME, '2024-01-01T13:00:00Z', false);
+      
+      // Verify task variables are set for post-job cleanup
+      expect(mockedTl.setTaskVariable).toHaveBeenCalledWith(constants.INSTALLATION_TOKEN_OUTPUT_VARNAME, 'ghs_mock_installation_token', true);
+      expect(mockedTl.setTaskVariable).toHaveBeenCalledWith(constants.SKIP_TOKEN_TASK_VARNAME, 'false');
+      expect(mockedTl.setTaskVariable).toHaveBeenCalledWith(constants.BASE_URL_TASK_VARNAME, constants.DEFAULT_API_URL);
+      
+      // Should not fail the task
       expect(mockedTl.setResult).not.toHaveBeenCalled();
     });
 
@@ -733,12 +723,26 @@ describe('run task logic', () => {
       await run();
 
       // Should succeed and pass permissions to getInstallationToken
+      expect(mockGitHubService.generateJWT).toHaveBeenCalledWith('test-app-id', 'mock-pem-key');
+      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'test-app-id', 'my-enterprise', 'enterprise', []);
       expect(mockGitHubService.getInstallationToken).toHaveBeenCalledWith(
         'mock.jwt.token',
         12345,
         [],
         { contents: 'read', issues: 'write' }
       );
+      
+      // Verify output variables are set
+      expect(mockedTl.setVariable).toHaveBeenCalledWith(constants.INSTALLATIONID_OUTPUT_VARNAME, '12345', false);
+      expect(mockedTl.setVariable).toHaveBeenCalledWith(constants.INSTALLATION_TOKEN_OUTPUT_VARNAME, 'ghs_mock_installation_token', true);
+      expect(mockedTl.setVariable).toHaveBeenCalledWith(constants.TOKEN_EXPIRATION_OUTPUT_VARNAME, '2024-01-01T13:00:00Z', false);
+      
+      // Verify task variables are set for post-job cleanup
+      expect(mockedTl.setTaskVariable).toHaveBeenCalledWith(constants.INSTALLATION_TOKEN_OUTPUT_VARNAME, 'ghs_mock_installation_token', true);
+      expect(mockedTl.setTaskVariable).toHaveBeenCalledWith(constants.SKIP_TOKEN_TASK_VARNAME, 'false');
+      expect(mockedTl.setTaskVariable).toHaveBeenCalledWith(constants.BASE_URL_TASK_VARNAME, constants.DEFAULT_API_URL);
+      
+      // Should not fail the task
       expect(mockedTl.setResult).not.toHaveBeenCalled();
     });
   });
@@ -818,7 +822,7 @@ describe('run task logic', () => {
       await run();
 
       // Should use forced owner and repo from Build.Repository.Name
-      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'force-owner', "org", ['force-repo']);
+      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'test-app-id', 'force-owner', "org", ['force-repo']);
       expect(mockGitHubService.getInstallationToken).toHaveBeenCalledWith('mock.jwt.token', 12345, ['force-repo'], undefined);
 
       // Assert that a debug message was logged about ignoring the passed repo
@@ -932,7 +936,7 @@ describe('run task logic', () => {
       expect(mockedTl.warning).toHaveBeenCalledWith('Forcing repo scope to force-repo. Ignoring repositories input different-repo');
       
       // Should use forced repo from Build.Repository.Name, not the input
-      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'force-owner', "org", ['force-repo']);
+      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'test-app-id', 'force-owner', "org", ['force-repo']);
       expect(mockGitHubService.getInstallationToken).toHaveBeenCalledWith('mock.jwt.token', 12345, ['force-repo'], undefined);
     });
 
@@ -975,7 +979,7 @@ describe('run task logic', () => {
       expect(mockedTl.warning).toHaveBeenCalledWith('Forcing repo scope to force-repo, even though no repositories were provided');
       
       // Should use forced repo
-      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'force-owner', "org", ['force-repo']);
+      expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'test-app-id', 'force-owner', "org", ['force-repo']);
       expect(mockGitHubService.getInstallationToken).toHaveBeenCalledWith('mock.jwt.token', 12345, ['force-repo'], undefined);
     });
   });

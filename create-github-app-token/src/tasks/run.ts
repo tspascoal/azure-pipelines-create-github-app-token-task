@@ -13,17 +13,22 @@ async function run() {
     const provider = tl.getVariable('Build.Repository.Provider');
     let owner = tl.getInput('owner', false)
     const nwo = tl.getVariable('Build.Repository.Name')!;
+    const accountType = tl.getInput('accountType', false) || constants.ACCOUNT_TYPE_ORG;
 
     // If owner is not provided,get it from the repository name (provider has to be GitHub)
     if (!owner) {
-      failIfProviderIsNotGitHub(provider, "If owner is not provided, the repository provider must be GitHub");
-      const extractedOwner = getOwnerName(nwo);
-      console.log(`Extracted owner from Build.Repository.Name: ${extractedOwner}`);
+      if(accountType != constants.ACCOUNT_TYPE_ENTERPRISE) {
+        failIfProviderIsNotGitHub(provider, "If owner is not provided, the repository provider must be GitHub");
+        const extractedOwner = getOwnerName(nwo);
+        console.log(`Extracted owner from Build.Repository.Name: ${extractedOwner}`);
 
-      owner = extractedOwner;
+        owner = extractedOwner;
+      } else {
+        tl.setResult(tl.TaskResult.Failed, 'Enterprise account type requires an owner to be specified.');
+        return;
+      }
     }
 
-    const accountType = tl.getInput('accountType', false) || constants.ACCOUNT_TYPE_ORG;
     let appClientId = tl.getInput('appClientId', false) || undefined;
     const privateKeyPath = tl.getInput('certificateFile', false) || '';
     const privateKeyInput = tl.getInput('certificate', false) || '';
@@ -159,7 +164,7 @@ async function run() {
     if (accountType.toLowerCase() === constants.ACCOUNT_TYPE_ENTERPRISE) {
       // Enterprise accounts require the owner field to be specified
       if (!owner) {
-        tl.setResult(tl.TaskResult.Failed, 'Owner is required for enterprise account type. Please specify the enterprise slug/name.');
+        tl.setResult(tl.TaskResult.Failed, 'Enterprise account type requires an owner to be specified.');
         return;
       }
 
@@ -188,7 +193,7 @@ async function run() {
       repositories = repositoriesList.split(',').map(repo => repo.trim());
     }
 
-    const installationId = await githubService.getInstallationId(jwtToken, owner, accountType, repositories);
+    const installationId = await githubService.getInstallationId(jwtToken, appClientId, owner, accountType, repositories);
     console.log(`Found installation ID: ${installationId}`);
 
     const { token, expiresAt } = await githubService.getInstallationToken(jwtToken, installationId, repositories, permissions);

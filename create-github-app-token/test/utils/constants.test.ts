@@ -9,6 +9,10 @@ describe('constants', () => {
     it('should define JWT expiration as 10 minutes in seconds', () => {
       expect(constants.JWT_EXPIRATION).toBe(10 * 60);
     });
+    
+    it('should define JWT clock skew tolerance', () => {
+      expect(constants.JWT_CLOCK_DRIFT_SECONDS).toBe(60);
+    });
   });
 
   describe('output variable names', () => {
@@ -47,5 +51,7 @@ describe('constants', () => {
     it('should define enterprise account type', () => {
       expect(constants.ACCOUNT_TYPE_ENTERPRISE).toBe('enterprise');
     });
+
+    
   });
 });

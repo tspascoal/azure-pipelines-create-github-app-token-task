@@ -35,10 +35,10 @@ export class GitHubService {
     }
 
     async generateJWT(appIdOrClientId: string, privateKey: string): Promise<string> {
-        const now = Math.floor(Date.now() / 1000);
+        const nowSeconds = Math.floor(Date.now() / 1000);
         const payload = {
-            iat: now - 60,        // issued at time, 60s in the past to allow for clock drift
-            exp: now + constants.JWT_EXPIRATION,
+            iat: nowSeconds - constants.JWT_CLOCK_DRIFT_SECONDS,        // issued at time, 60s in the past to allow for clock drift
+            exp: nowSeconds + constants.JWT_EXPIRATION - constants.JWT_CLOCK_DRIFT_SECONDS, // expiration time, 10 minutes from now
             iss: appIdOrClientId  // GitHub App's client (preferable) or app identifier
         };
 
@@ -63,7 +63,7 @@ export class GitHubService {
      * @returns A promise that resolves to the installation ID of the GitHub App.
      * @throws An error if the repository name is invalid or if the API request fails.
      */
-    async getInstallationId(jwtToken: string, owner: string, accountType: string, repositories: string[] = []): Promise<number> {
+    async getInstallationId(jwtToken: string, appClientId: string, owner: string, accountType: string, repositories: string[] = []): Promise<number> {
         let url = undefined
         let groupName = '';
         let id = 0;
@@ -80,7 +80,7 @@ export class GitHubService {
                 }
             } else if (accountType.toLowerCase() === constants.ACCOUNT_TYPE_ENTERPRISE) {
                 // Enterprise installations require pagination through all installations
-                return await this.getEnterpriseInstallationId(jwtToken, owner);
+                return await this.getEnterpriseInstallationId(jwtToken, appClientId);
             } else if (accountType.toLowerCase() === constants.ACCOUNT_TYPE_ORG) {
                 groupName = `##[group]Get Installation ID for organization ${owner}`;
                 url = `${this.baseUrl}/orgs/${owner}/installation`;
@@ -117,6 +117,9 @@ export class GitHubService {
             tl.debug(`Target type: ${response.data.target_type}`);
 
         } catch (err: any) {
+
+            this.dumpHeaders(err.response?.headers);
+
             let message = '';
             if (err.status === 404) {
                 let targetType = 'account';
@@ -146,18 +149,17 @@ export class GitHubService {
      * API: https://docs.github.com/en/rest/apps/apps?apiVersion=2022-11-28#list-installations-for-the-authenticated-app
      * 
      * @param jwtToken - The JWT token for authentication
-     * @param enterprise - enterprise slug/name to match against
+     * @param appIdOrClientId - GitHub App ID or Client ID to match against
      * @returns Promise<number> - The installation ID
-     * @throws Error if no enterprise installation found, multiple found without specific name, or API errors
+     * @throws Error if no matching app installation found for enterprises, or API errors
      */
-    async getEnterpriseInstallationId(jwtToken: string, enterprise: string): Promise<number> {
-        const groupName = `##[group]Get Installation ID for enterprise ${enterprise}`;
+    async getEnterpriseInstallationId(jwtToken: string, appIdOrClientId: string): Promise<number> {
+        const groupName = `##[group]Get Installation ID for enterprise app ${appIdOrClientId}`;
         console.log(`##[group]${groupName}`);
         console.log('Searching for enterprise installation across all app installations (workaround - no direct API available)');
 
         let page = 1;
         const perPage = 100; // Maximum allowed by GitHub API
-        let enterpriseInstallations: any[] = [];
         
         try {
             while (true) {
@@ -174,21 +176,32 @@ export class GitHubService {
                 tl.debug(`Response payload (page ${page}): ${JSON.stringify(response.data)}`);
 
                 const installations = response.data;
-                console.log(`Processing page ${page} of installations (found ${installations.length} installations on this page)`);
+                tl.debug(`Processing page ${page} of installations (${installations.length} installations)`);
 
-                // Filter for enterprise installations
-                const enterpriseInstallationsOnPage = installations.filter((installation: any) => 
-                    installation.target_type === 'Enterprise'
+                // Find matching installation by app ID or app client ID
+                const matchingInstallation = installations.find((installation: any) => 
+                    installation.target_type === 'Enterprise' &&
+                    ( 
+                        installation.app_id?.toString() === appIdOrClientId ||
+                        installation.client_id === appIdOrClientId
+                    )
                 );
 
-                if (enterpriseInstallationsOnPage.length > 0) {
-                    console.log(`Found ${enterpriseInstallationsOnPage.length} enterprise installations on page ${page}`);
-                    enterpriseInstallations = enterpriseInstallations.concat(enterpriseInstallationsOnPage);
+                if (matchingInstallation) {
+                    console.log(`Found enterprise installation for app ID/client ID '${appIdOrClientId}' on page ${page}`);
+                    const installationId = matchingInstallation.id;
+
+                    tl.debug(`Enterprise installation found: ${matchingInstallation.account.name} (install ID: ${installationId})`);
+                    tl.debug(`Installation app slug: ${matchingInstallation.app_slug || 'N/A'}`);
+                    tl.debug(`Installation app name: ${matchingInstallation.app_name || 'N/A'}`);
+                    
+                    return installationId;
                 }
 
-                // Check if we've reached the end of results
-                if (installations.length < perPage) {
-                    console.log(`Reached end of installations (page ${page} returned ${installations.length} results)`);
+                // Check if we've reached the end of results using GitHub's pagination headers
+                const linkHeader = response.headers['link'];
+                if (!linkHeader || !linkHeader.includes('rel="next"')) {
+                    console.log(`No 'next' link header found. Reached end of installations (page ${page}).`);
                     break;
                 }
 
@@ -197,8 +210,7 @@ export class GitHubService {
                 const rateLimitReset = parseInt(response.headers['x-ratelimit-reset'] || '0');
                 const currentTime = Math.floor(Date.now() / 1000);
                 
-                if (rateLimitRemaining < 10 && (rateLimitReset - currentTime) <= 300) {
-                    // Less than 10 requests remaining and reset is within 5 minutes - wait
+                if (rateLimitRemaining === 0 && (rateLimitReset - currentTime) <= 300) {
                     const waitTime = (rateLimitReset - currentTime) + 10; // Add 10 seconds buffer
                     console.log(`Rate limit approaching. Waiting ${waitTime} seconds before next request.`);
                     await new Promise(resolve => setTimeout(resolve, waitTime * 1000));
@@ -210,39 +222,8 @@ export class GitHubService {
                 page++;
             }
 
-            console.log(`Found ${enterpriseInstallations.length} total enterprise installations across all pages`);
-
-            if (enterpriseInstallations.length === 0) {
-                throw new Error(`No enterprise installations found for GitHub App. Please verify the app is installed at the enterprise level for: ${enterprise}`);
-            }
-
-            // Filter by specific enterprise name/slug if provided
-            let matchingInstallations = enterpriseInstallations.filter((installation: any) => 
-                installation.account.login.toLowerCase() === enterprise.toLowerCase()
-            );
-
-            if (matchingInstallations.length === 0) {
-                const availableEnterprises = enterpriseInstallations.map((inst: any) => inst.account.login).join(', ');
-                throw new Error(`Enterprise installation not found for '${enterprise}'. Available enterprise installations: ${availableEnterprises}`);
-            }
-
-            if (matchingInstallations.length > 1) {
-                console.log(`Warning: Found multiple installations for enterprise '${enterprise}'. Using the first one.`);
-            }
-
-            const installation = matchingInstallations[0];
-            const installationId = installation.id;
-
-            console.log(`Enterprise installation found: ${installation.account.login} (ID: ${installationId})`);
-            
-            // Log additional details for debugging
-            tl.debug(`Installation target type: ${installation.target_type}`);
-            tl.debug(`Installation app slug: ${installation.app_slug || 'N/A'}`);
-            
-            const permissionsCsv = this.formatPermissions(installation.permissions || {});
-            console.log(`Permissions: ${permissionsCsv}`);
-
-            return installationId;
+            // If we reach here, the enterprise installation was not found
+            throw new Error(`GitHub App installation not found for app ID/client ID '${appIdOrClientId}'. Please verify the app ID/client ID and enterprise installation.`);
 
         } catch (err: any) {
             let message = '';
@@ -379,11 +360,12 @@ export class GitHubService {
      * @param headers - An object containing the headers to be logged, where each key is the header name
      * and the corresponding value is the header value.
      */
-    private dumpHeaders(headers: any) {
-        Object.keys(headers).forEach((key) => {
-            const value = headers[key];
+    private dumpHeaders(headers: Record<string, any> | undefined | null): void {
+        if (!headers || tl.getVariable('System.Debug')?.toLowerCase() !== 'true') return;
+        
+        for (const [key, value] of Object.entries(headers)) {
             tl.debug(`Header: ${key} = ${value}`);
-        });
+        }
     }
 
     private formatPermissions(permissions: any): string {

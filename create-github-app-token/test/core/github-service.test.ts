@@ -75,7 +75,7 @@ mockprivatekeydata
       expect(jwt.sign).toHaveBeenCalledWith(
         {
           iat: expectedTimestamp - 60,
-          exp: expectedTimestamp + 600, // 10 minutes
+          exp: expectedTimestamp + 600 - 60, // 10 minutes (minus 60 seconds for clock skew)
           iss: appId
         },
         mockPrivateKey,
@@ -106,7 +106,7 @@ mockprivatekeydata
           .reply(200, mockInstallationResponse);
 
         const service = new GitHubService(baseUrl);
-        const result = await service.getInstallationId(mockJwtToken, owner, 'org');
+        const result = await service.getInstallationId(mockJwtToken, 'test-app-id', owner, 'org');
 
         expect(result).toBe(installationId);
       });
@@ -119,7 +119,7 @@ mockprivatekeydata
         const service = new GitHubService(baseUrl);
         
         await expect(
-          service.getInstallationId(mockJwtToken, owner, 'org')
+          service.getInstallationId(mockJwtToken, 'test-app-id', owner, 'org')
         ).rejects.toThrow(`GitHub App not found for Organization ${owner}. Please verify the installation.`);
       });
     });
@@ -131,7 +131,7 @@ mockprivatekeydata
           .reply(200, mockInstallationResponse);
 
         const service = new GitHubService(baseUrl);
-        const result = await service.getInstallationId(mockJwtToken, user, 'user');
+        const result = await service.getInstallationId(mockJwtToken, 'test-app-id', user, 'user');
 
         expect(result).toBe(installationId);
       });
@@ -144,7 +144,7 @@ mockprivatekeydata
         const service = new GitHubService(baseUrl);
         
         await expect(
-          service.getInstallationId(mockJwtToken, owner, 'user')
+          service.getInstallationId(mockJwtToken, 'test-app-id', owner, 'user')
         ).rejects.toThrow(`GitHub App not found for account ${owner}. Please verify the installation.`);
       });
     });
@@ -158,7 +158,7 @@ mockprivatekeydata
           .reply(200, mockInstallationResponse);
 
         const service = new GitHubService(baseUrl);
-        const result = await service.getInstallationId(mockJwtToken, owner, "org", [repo]);
+        const result = await service.getInstallationId(mockJwtToken, 'test-app-id', owner, "org", [repo]);
 
         expect(result).toBe(installationId);
       });
@@ -168,7 +168,7 @@ mockprivatekeydata
         const service = new GitHubService(baseUrl);
         
         await expect(
-          service.getInstallationId(mockJwtToken, owner, "org", [invalidRepo])
+          service.getInstallationId(mockJwtToken, 'test-app-id', owner, "org", [invalidRepo])
         ).rejects.toThrow(`Invalid repository name format: ${invalidRepo}. It can only contain ASCII letters, digits, and the characters ., -, and _`);
       });
 
@@ -180,7 +180,7 @@ mockprivatekeydata
         const service = new GitHubService(baseUrl);
         
         await expect(
-          service.getInstallationId(mockJwtToken, owner, "org", [repo])
+          service.getInstallationId(mockJwtToken, 'test-app-id', owner, "org", [repo])
         ).rejects.toThrow(`GitHub App not found for Organization ${owner}. Please verify the installation and repository access.`);
       });
     });
@@ -193,7 +193,7 @@ mockprivatekeydata
       const service = new GitHubService(baseUrl);
       
       await expect(
-        service.getInstallationId(mockJwtToken, owner, "org")
+        service.getInstallationId(mockJwtToken, 'test-app-id', owner, "org")
       ).rejects.toThrow('Failed to get installation ID:');
     });
 
@@ -206,14 +206,15 @@ mockprivatekeydata
         account: {
           login: enterprise
         },
+        app_id: 2345,
+        client_id: 'test-app-id',
         app_slug: 'test-app',
         permissions: {
-          contents: 'read',
-          issues: 'write'
-        }
+            enterprise_custom_properties: "read"
+        },
       };
 
-      it('should get installation ID for enterprise', async () => {
+      it('should get installation ID for enterprise by app client id', async () => {
         nock(baseUrl)
           .get('/app/installations?per_page=100&page=1')
           .reply(200, [
@@ -231,25 +232,20 @@ mockprivatekeydata
           ]);
 
         const service = new GitHubService(baseUrl);
-        const result = await service.getInstallationId(mockJwtToken, enterprise, 'enterprise');
+        const result = await service.getInstallationId(mockJwtToken, 'test-app-id', enterprise, 'enterprise');
 
         expect(result).toBe(installationId);
       });
 
-      it('should handle multiple pages when searching for enterprise', async () => {
-        // First page with no enterprise installations
+      it('should get installation ID for enterprise by app id', async () => {
         nock(baseUrl)
           .get('/app/installations?per_page=100&page=1')
-          .reply(200, Array(100).fill({
-            id: 11111,
-            target_type: 'Organization',
-            account: { login: 'some-org' }
-          }));
-
-        // Second page with enterprise installation
-        nock(baseUrl)
-          .get('/app/installations?per_page=100&page=2')
           .reply(200, [
+            {
+              id: 11111,
+              target_type: 'Organization',
+              account: { login: 'some-org' }
+            },
             mockEnterpriseInstallation,
             {
               id: 22222,
@@ -259,20 +255,48 @@ mockprivatekeydata
           ]);
 
         const service = new GitHubService(baseUrl);
-        const result = await service.getInstallationId(mockJwtToken, enterprise, 'enterprise');
+        const result = await service.getInstallationId(mockJwtToken, '2345', enterprise, 'enterprise');
 
         expect(result).toBe(installationId);
       });
 
-      it('should handle case-insensitive enterprise matching', async () => {
-        nock(baseUrl)
+      it('should handle multiple pages when searching for enterprise', async () => {
+        // First page with no enterprise installations
+        const page1Scope = nock(baseUrl)
           .get('/app/installations?per_page=100&page=1')
-          .reply(200, [mockEnterpriseInstallation]);
+          .reply(200, Array(100).fill({
+              id: 11111,
+              target_type: 'Organization',
+              account: { login: 'some-org' }
+            }), {
+              'link': '<https://api.github.com/app/installations?per_page=100&page=2>; rel="next"'
+            }
+        );
+
+        // Second page with enterprise installation
+        const page2Scope = nock(baseUrl)
+          .get('/app/installations?per_page=100&page=2')
+          .reply(
+            200,
+            [
+              mockEnterpriseInstallation,
+              {
+                id: 22222,
+                target_type: 'User',
+                account: { login: 'some-user' }
+              }
+            ],
+            {
+              'link': '<https://api.github.com/app/installations?per_page=100&page=2>; rel="last"'
+            }
+          );
 
         const service = new GitHubService(baseUrl);
-        const result = await service.getInstallationId(mockJwtToken, 'MY-ENTERPRISE', 'enterprise');
+        const result = await service.getInstallationId(mockJwtToken, 'test-app-id', enterprise, 'enterprise');
 
         expect(result).toBe(installationId);
+        expect(page1Scope.isDone()).toBe(true);
+        expect(page2Scope.isDone()).toBe(true);
       });
 
       it('should throw error when no enterprise installations found', async () => {
@@ -294,8 +318,8 @@ mockprivatekeydata
         const service = new GitHubService(baseUrl);
         
         await expect(
-          service.getInstallationId(mockJwtToken, enterprise, 'enterprise')
-        ).rejects.toThrow(`No enterprise installations found for GitHub App. Please verify the app is installed at the enterprise level for: ${enterprise}`);
+          service.getInstallationId(mockJwtToken, 'test-app-id', enterprise, 'enterprise')
+        ).rejects.toThrow(`GitHub App installation not found for app ID/client ID 'test-app-id'. Please verify the app ID/client ID and enterprise installation.`);
       });
 
       it('should throw error when specific enterprise not found', async () => {
@@ -305,15 +329,17 @@ mockprivatekeydata
             {
               id: 33333,
               target_type: 'Enterprise',
-              account: { login: 'other-enterprise' }
+              account: { login: 'other-enterprise' },
+              app_id: 'different-app-id',
+              client_id: 'different-client-id'
             }
           ]);
 
         const service = new GitHubService(baseUrl);
         
         await expect(
-          service.getInstallationId(mockJwtToken, enterprise, 'enterprise')
-        ).rejects.toThrow(`Enterprise installation not found for '${enterprise}'. Available enterprise installations: other-enterprise`);
+          service.getInstallationId(mockJwtToken, 'test-app-id', enterprise, 'enterprise')
+        ).rejects.toThrow(`GitHub App installation not found for app ID/client ID 'test-app-id'. Please verify the app ID/client ID and enterprise installation.`);
       });
 
       it('should handle rate limiting during pagination', async () => {
@@ -325,8 +351,9 @@ mockprivatekeydata
             target_type: 'Organization',
             account: { login: 'some-org' }
           }), {
-            'x-ratelimit-remaining': '5',
-            'x-ratelimit-reset': String(Math.floor(Date.now() / 1000) + 120) // Reset in 2 minutes (within 5 min threshold)
+            'x-ratelimit-remaining': '0',
+            'x-ratelimit-reset': String(Math.floor(Date.now() / 1000) + 120), // Reset in 2 minutes (within 5 min threshold)
+            'link': '<https://api.github.com/app/installations?per_page=100&page=2>; rel="next"'
           });
 
         // Second request should succeed after waiting
@@ -345,7 +372,7 @@ mockprivatekeydata
         global.setTimeout = mockSetTimeout;
 
         try {
-          const result = await service.getInstallationId(mockJwtToken, enterprise, 'enterprise');
+          const result = await service.getInstallationId(mockJwtToken, 'test-app-id', enterprise, 'enterprise');
           expect(result).toBe(installationId);
           expect(mockSetTimeout).toHaveBeenCalled();
         } finally {
@@ -363,13 +390,14 @@ mockprivatekeydata
             account: { login: 'some-org' }
           }), {
             'x-ratelimit-remaining': '0',
-            'x-ratelimit-reset': String(Math.floor(Date.now() / 1000) + 3600) // Reset in 1 hour
+            'x-ratelimit-reset': String(Math.floor(Date.now() / 1000) + 3600), // Reset in 1 hour
+            'link': '<https://api.github.com/app/installations?per_page=100&page=2>; rel="next"'
           });
 
         const service = new GitHubService(baseUrl);
         
         await expect(
-          service.getEnterpriseInstallationId(mockJwtToken, enterprise)
+          service.getEnterpriseInstallationId(mockJwtToken, 'test-app-id')
         ).rejects.toThrow('GitHub API rate limit exceeded');
       });
 
@@ -381,7 +409,7 @@ mockprivatekeydata
         const service = new GitHubService(baseUrl);
         
         await expect(
-          service.getInstallationId(mockJwtToken, enterprise, 'enterprise')
+          service.getInstallationId(mockJwtToken, 'test-app-id', enterprise, 'enterprise')
         ).rejects.toThrow('GitHub App JWT authentication failed. Please verify the app credentials.');
       });
 
@@ -393,7 +421,7 @@ mockprivatekeydata
         const service = new GitHubService(baseUrl);
         
         await expect(
-          service.getInstallationId(mockJwtToken, enterprise, 'enterprise')
+          service.getInstallationId(mockJwtToken, 'test-app-id', enterprise, 'enterprise')
         ).rejects.toThrow('GitHub App does not have permission to list installations. Please verify the app permissions.');
       });
 
@@ -403,12 +431,16 @@ mockprivatekeydata
             id: 55555,
             target_type: 'Enterprise',
             account: { login: enterprise },
+            app_id: 'test-app-id',
+            client_id: 'test-app-id',
             permissions: { contents: 'read' }
           },
           {
             id: 66666,
             target_type: 'Enterprise',
             account: { login: enterprise }, // Same enterprise, multiple installations
+            app_id: 'other-app-id',
+            client_id: 'other-app-id',
             permissions: { contents: 'write' }
           }
         ];
@@ -418,7 +450,7 @@ mockprivatekeydata
           .reply(200, mockInstallations);
 
         const service = new GitHubService(baseUrl);
-        const result = await service.getInstallationId(mockJwtToken, enterprise, 'enterprise');
+        const result = await service.getInstallationId(mockJwtToken, 'test-app-id', enterprise, 'enterprise');
 
         // Should return the first matching installation
         expect(result).toBe(55555);
@@ -648,7 +680,7 @@ mockprivatekeydata
         });
 
       const service = new GitHubService(baseUrl);
-      await service.getInstallationId(mockJwtToken, 'test-org', 'org');
+      await service.getInstallationId(mockJwtToken, 'test-app-id', 'test-org', 'org');
 
       expect(scope.isDone()).toBe(true);
     });
@@ -694,6 +726,7 @@ mockprivatekeydata
       // Get installation ID using first repository
       const actualInstallationId = await service.getInstallationId(
         jwtToken, 
+        'test-app-id',
         owner, 
         'org', 
         [repositories[0]]
@@ -756,7 +789,7 @@ mockprivatekeydata
           }
         );
 
-      const result = await service.getInstallationId('jwt-token', owner, "org");
+      const result = await service.getInstallationId('jwt-token', 'test-app-id', owner, "org");
       expect(result).toBe(12345);
       
       // Headers should be logged in debug mode (tested in main GitHubService tests)
@@ -775,7 +808,7 @@ mockprivatekeydata
           permissions: {}
         });
 
-      const result = await service.getInstallationId('jwt-token', owner, "org");
+      const result = await service.getInstallationId('jwt-token', 'test-app-id', owner, "org");
       expect(result).toBe(12345);
     });
 
@@ -798,7 +831,7 @@ mockprivatekeydata
           target_type: 'Organization'
         });
 
-      const result = await service.getInstallationId('jwt-token', owner, "org");
+      const result = await service.getInstallationId('jwt-token', 'test-app-id', owner, "org");
       expect(result).toBe(12345);
     });
   });
