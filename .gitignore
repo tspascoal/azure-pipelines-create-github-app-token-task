@@ -9,3 +9,6 @@ lib
 
 coverage/
 smoke-tests/
+
+# Test results
+test-results/
