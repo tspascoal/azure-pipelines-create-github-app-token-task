@@ -6,6 +6,7 @@
     "build": "tsc",
     "clean": "rm -rf ./dist ./lib",
     "prebuild": "npm run clean",
+    "postbuild": "node scripts/update-version.js",
     "test": "jest --coverage",
     "package": "npm run build && ncc build dist/src/tasks/run.js -o lib/run && ncc build dist/src/tasks/post.js -o lib/post"
   },

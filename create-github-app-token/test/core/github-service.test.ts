@@ -686,6 +686,26 @@ mockprivatekeydata
     });
   });
 
+  describe('user agent header', () => {
+    it('should include user agent header with correct format', async () => {
+      const userAgentPattern = /^azure-pipelines-create-github-app-token-task\/[\w.-]+$/;
+      
+      const scope = nock(baseUrl)
+        .get('/orgs/test-org/installation')
+        .matchHeader('user-agent', userAgentPattern)
+        .reply(200, { 
+          id: 12345,
+          repository_selection: 'all',
+          permissions: { contents: 'read' }
+        });
+
+      const service = new GitHubService(baseUrl);
+      await service.getInstallationId(mockJwtToken, 'test-app-id', 'test-org', 'org');
+
+      expect(scope.isDone()).toBe(true);
+    });
+  });
+
   describe('advanced integration scenarios', () => {
     it('should handle enterprise GitHub URL normalization', () => {
       const enterpriseUrl = 'https://github.enterprise.com/api/v3/';
