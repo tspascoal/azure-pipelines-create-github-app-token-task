@@ -13,6 +13,13 @@
         "Patch": 6
     },
     "instanceNameFormat": "Create GitHub App Installation Token",
+    "groups": [
+        {
+            "name": "withoutServiceConnection",
+            "displayName": "Without Service Connection",
+            "isExpanded": false
+        }
+    ],
     "inputs": [
         {
             "name": "githubAppConnection",
@@ -32,15 +39,15 @@
         },
         {
             "name": "accountType",
-            "type": "string",
+            "type": "radio",
             "label": "Account Type",
             "defaultValue": "org",
             "required": false,
             "helpMarkDown": "The type of account to use. Can be 'organization', 'user', or 'enterprise'. (required if repositories is not set)",
             "options": {
-                "org": "organization account",
-                "user": "user account",
-                "enterprise": "enterprise account"
+                "org": "organization",
+                "user": "user",
+                "enterprise": "enterprise"
             }
         },
         {
@@ -57,7 +64,8 @@
             "type": "string",
             "label": "GitHub App PEM certificate filename",
             "required": false,
-            "helpMarkDown": "The PEM certificate"
+            "helpMarkDown": "The PEM certificate",
+            "groupName": "withoutServiceConnection"
         }, 
         {
             "name": "certificate",
@@ -65,7 +73,8 @@
             "type": "string",
             "label": "GitHub App PEM certificate",
             "required": false,
-            "helpMarkDown": "The PEM certificate"
+            "helpMarkDown": "The PEM certificate",
+            "groupName": "withoutServiceConnection"
         }, 
         {
             "name": "appClientId",
@@ -73,7 +82,8 @@
             "label": "GitHub App Client ID",
             "defaultValue": "",
             "required": false,
-            "helpMarkDown": "The GitHub App ID (found in the app settings)"
+            "helpMarkDown": "The GitHub App ID (found in the app settings)",
+            "groupName": "withoutServiceConnection"
         },
         {
             "name": "skipTokenRevoke",

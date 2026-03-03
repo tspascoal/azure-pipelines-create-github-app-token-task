@@ -23,6 +23,10 @@
             "addressable": true
         },
         {
+            "path": "create-github-app-token/icon.png",
+            "addressable": true
+        },
+        {
             "path": "create-github-app-token/task.json"
         },
         {
