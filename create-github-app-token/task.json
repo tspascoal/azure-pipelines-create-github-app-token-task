@@ -16,7 +16,7 @@
     "groups": [
         {
             "name": "withoutServiceConnection",
-            "displayName": "Without Service Connection",
+            "displayName": "Direct Inputs",
             "isExpanded": false
         }
     ],
