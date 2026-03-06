@@ -43,7 +43,7 @@
             "label": "Account Type",
             "defaultValue": "org",
             "required": false,
-            "helpMarkDown": "The type of account to use. Can be 'organization', 'user', or 'enterprise'. (required if repositories is not set)",
+            "helpMarkDown": "The type of account to use. Valid values are 'org', 'user', or 'enterprise'. (required if repositories is not set)",
             "options": {
                 "org": "organization",
                 "user": "user",
