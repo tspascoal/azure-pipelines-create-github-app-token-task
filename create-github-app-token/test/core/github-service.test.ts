@@ -829,7 +829,7 @@ mockprivatekeydata
 
     it('should log headers via dumpHeaders when System.Debug is true', async () => {
       const owner = 'test-org';
-      mockedTl.getVariable.mockImplementation((name: string) => {
+      mockedTl.getVariable.mockImplementationOnce((name: string) => {
         if (name === 'System.Debug') return 'true';
         return undefined;
       });

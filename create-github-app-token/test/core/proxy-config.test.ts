@@ -238,6 +238,35 @@ describe('ProxyConfig', () => {
 
       expect(() => proxyConfig.getAxiosProxyConfig()).toThrow('Invalid proxy URL');
     });
+
+    it('should throw an error for malformed percent-encoded credentials in URL', () => {
+      // %ZZ is not valid percent-encoding
+      const proxyConfig = new ProxyConfig({ proxyUrl: 'http://user%ZZ:pass@proxy.example.com:8080' });
+
+      expect(() => proxyConfig.getAxiosProxyConfig()).toThrow('Invalid proxy URL');
+    });
+  });
+
+  describe('sanitizeUrl', () => {
+    it('should strip credentials from a valid URL', () => {
+      expect(ProxyConfig.sanitizeUrl('http://user:pass@proxy.example.com:8080')).toBe('http://proxy.example.com:8080');
+    });
+
+    it('should return the URL unchanged when there are no credentials', () => {
+      expect(ProxyConfig.sanitizeUrl('http://proxy.example.com:8080')).toBe('http://proxy.example.com:8080');
+    });
+
+    it('should redact userinfo from an unparseable URL containing credentials', () => {
+      // IPv6 bracket not closed makes the URL unparseable but still has userinfo
+      const result = ProxyConfig.sanitizeUrl('http://user:pass@[1.2.3.4:8080');
+      expect(result).toContain('<redacted>@');
+      expect(result).not.toContain('user');
+      expect(result).not.toContain('pass');
+    });
+
+    it('should return the original string when unparseable URL has no userinfo', () => {
+      expect(ProxyConfig.sanitizeUrl('not-a-valid-url')).toBe('not-a-valid-url');
+    });
   });
 
   describe('getAxiosConfig', () => {
