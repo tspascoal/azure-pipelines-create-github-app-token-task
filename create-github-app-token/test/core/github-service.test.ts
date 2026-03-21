@@ -183,6 +183,18 @@ mockprivatekeydata
           service.getInstallationId(mockJwtToken, 'test-app-id', owner, "org", [repo])
         ).rejects.toThrow(`GitHub App not found for Organization ${owner}. Please verify the installation and repository access.`);
       });
+
+      it('should handle 404 error for repository installation with enterprise account type', async () => {
+        nock(baseUrl)
+          .get(`/repos/${owner}/${repo}/installation`)
+          .reply(404, { message: 'Not Found' });
+
+        const service = new GitHubService(baseUrl);
+        
+        await expect(
+          service.getInstallationId(mockJwtToken, 'test-app-id', owner, 'enterprise', [repo])
+        ).rejects.toThrow(`GitHub App not found for Enterprise ${owner}. Please verify the installation and repository access.`);
+      });
     });
 
     it('should handle generic errors', async () => {
@@ -813,6 +825,33 @@ mockprivatekeydata
       expect(result).toBe(12345);
       
       // Headers should be logged in debug mode (tested in main GitHubService tests)
+    });
+
+    it('should log headers via dumpHeaders when System.Debug is true', async () => {
+      const owner = 'test-org';
+      mockedTl.getVariable.mockImplementationOnce((name: string) => {
+        if (name === 'System.Debug') return 'true';
+        return undefined;
+      });
+
+      const service = new GitHubService(baseUrl);
+      
+      nock(baseUrl)
+        .get(`/orgs/${owner}/installation`)
+        .reply(200, 
+          { 
+            id: 12345,
+            repository_selection: 'all',
+            permissions: { contents: 'read' }
+          },
+          {
+            'x-custom-header': 'test-value'
+          }
+        );
+
+      const result = await service.getInstallationId('jwt-token', 'test-app-id', owner, 'org');
+      expect(result).toBe(12345);
+      expect(mockedTl.debug).toHaveBeenCalledWith(expect.stringContaining('Header:'));
     });
 
     it('should handle installation response without optional fields', async () => {
