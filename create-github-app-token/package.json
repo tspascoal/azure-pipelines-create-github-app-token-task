@@ -17,11 +17,11 @@
   "dependencies": {
     "axios": "^1.13.6",
     "azure-pipelines-task-lib": "^5.0.0",
-    "jsonwebtoken": "^9.0.2"
+    "jsonwebtoken": "^9.0.3"
   },
   "devDependencies": {
     "@types/jest": "^29.5.12",
-    "@types/jsonwebtoken": "^9.0.5",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/nock": "^11.1.0",
     "@types/node": "^18.*",
     "@types/q": "^1.5.8",
