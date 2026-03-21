@@ -54,8 +54,31 @@ export class ProxyConfig {
             parsed.password = '';
             return parsed.toString().replace(/\/$/, '');
         } catch {
-            return '<invalid URL>';
+            // Fallback: best-effort redaction of potential userinfo while preserving
+            // the original (sanitized) string to aid in diagnosing misconfigurations.
+            return ProxyConfig.redactUserInfo(url);
         }
+    }
+
+    /**
+     * Best-effort redaction for strings that look like URLs but cannot be parsed.
+     * Removes any "userinfo" component (e.g. "user:pass@") if present.
+     */
+    private static redactUserInfo(url: string): string {
+        const trimmed = url.trim();
+
+        // Match and redact userinfo of the form "scheme://userinfo@host..."
+        // Example: "http://user:pass@proxy.example.com:8080" =>
+        //          "http://<redacted>@proxy.example.com:8080"
+        const userInfoPattern = /^([^:/?#]+:\/\/)([^@]+)@(.+)$/;
+        const match = trimmed.match(userInfoPattern);
+        if (match) {
+            return `${match[1]}<redacted>@${match[3]}`;
+        }
+
+        // If no userinfo is detected, return the trimmed input as-is so the user
+        // can still see what was provided.
+        return trimmed;
     }
 
     /**
@@ -85,8 +108,15 @@ export class ProxyConfig {
             protocol: proxyUrl.protocol
         };
 
-        const username = this.proxyUsername ?? (proxyUrl.username ? decodeURIComponent(proxyUrl.username) : undefined);
-        const password = this.proxyPassword ?? (proxyUrl.password ? decodeURIComponent(proxyUrl.password) : undefined);
+        let username: string | undefined;
+        let password: string | undefined;
+        try {
+            username = this.proxyUsername ?? (proxyUrl.username ? decodeURIComponent(proxyUrl.username) : undefined);
+            password = this.proxyPassword ?? (proxyUrl.password ? decodeURIComponent(proxyUrl.password) : undefined);
+        } catch {
+            // Malformed percent-encoding in proxy credentials
+            throw new Error(`Invalid proxy URL: ${ProxyConfig.sanitizeUrl(this.proxyUrl!)}`);
+        }
 
         if (username !== undefined || password !== undefined) {
             proxyConfig.auth = {
