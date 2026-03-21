@@ -1,6 +1,9 @@
 version: 2
 updates:
-  - package-ecosystem: "npm" 
+  - package-ecosystem: "npm"
     directory: "/create-github-app-token"
     schedule:
       interval: "weekly"
+    groups:
+      dev-dependencies:
+        dependency-type: "development"
