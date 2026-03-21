@@ -31,6 +31,6 @@
     "jest-junit": "^16.0.0",
     "nock": "^13.5.1",
     "ts-jest": "^29.1.1",
-    "typescript": "^5.8.2"
+    "typescript": "^5.9.3"
   }
 }
