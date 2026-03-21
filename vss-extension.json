@@ -2,7 +2,7 @@
     "manifestVersion": 1,
     "id": "create-github-app-token",
     "name": "GitHub App Token Generator",
-    "version": "1.0.7",
+    "version": "1.0.8",
     "publisher": "INSERT YOUR PUBLISHER HERE",
     "public": false,
     "targets": [
@@ -20,6 +20,10 @@
     "files": [
         {
             "path": "images/icon-app.png",
+            "addressable": true
+        },
+        {
+            "path": "create-github-app-token/icon.png",
             "addressable": true
         },
         {
