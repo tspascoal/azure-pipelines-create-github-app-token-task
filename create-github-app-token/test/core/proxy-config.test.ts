@@ -67,6 +67,24 @@ describe('ProxyConfig', () => {
       consoleSpy.mockRestore();
     });
 
+    it('should sanitize credentials from proxy URL in log output', () => {
+      const mockProxyConfig = {
+        proxyUrl: 'http://secretuser:secretpass@proxy.company.com:8080',
+        proxyUsername: undefined,
+        proxyPassword: undefined,
+        proxyFormattedUrl: 'http://secretuser:secretpass@proxy.company.com:8080'
+      };
+      mockedTl.getHttpProxyConfiguration.mockReturnValue(mockProxyConfig);
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      ProxyConfig.fromAzurePipelines('https://api.github.com');
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Proxy configuration: proxyUrl=http://proxy.company.com:8080, proxyUsername=not provided'
+      );
+      consoleSpy.mockRestore();
+    });
+
     it('should create ProxyConfig without username', () => {
       const mockProxyConfig = {
         proxyUrl: 'http://proxy.company.com:8080',
@@ -99,36 +117,146 @@ describe('ProxyConfig', () => {
     });
   });
 
-  describe('getProxyAgent', () => {
+  describe('getAxiosProxyConfig', () => {
     it('should return undefined when no proxy URL is configured', () => {
       const proxyConfig = new ProxyConfig();
-      const agent = proxyConfig.getProxyAgent();
-      expect(agent).toBeUndefined();
+      const config = proxyConfig.getAxiosProxyConfig();
+      expect(config).toBeUndefined();
     });
 
-    it('should return HTTP proxy agent for HTTP proxy URL', () => {
+    it('should return proxy config for HTTP proxy URL', () => {
       const proxyConfig = new ProxyConfig({ proxyUrl: 'http://proxy.example.com:8080' });
-      const agent = proxyConfig.getProxyAgent();
-      expect(agent).toBeDefined();
-      expect(agent!.constructor.name).toBe('HttpProxyAgent');
+      const config = proxyConfig.getAxiosProxyConfig();
+
+      expect(config).toEqual({
+        host: 'proxy.example.com',
+        port: 8080,
+        protocol: 'http:'
+      });
     });
 
-    it('should return HTTPS proxy agent for HTTPS proxy URL', () => {
-      const proxyConfig = new ProxyConfig({ proxyUrl: 'https://proxy.example.com:8080' });
-      const agent = proxyConfig.getProxyAgent();
-      expect(agent).toBeDefined();
-      expect(agent!.constructor.name).toBe('HttpsProxyAgent');
+    it('should return proxy config for HTTPS proxy URL', () => {
+      const proxyConfig = new ProxyConfig({ proxyUrl: 'https://proxy.example.com:8443' });
+      const config = proxyConfig.getAxiosProxyConfig();
+
+      expect(config).toEqual({
+        host: 'proxy.example.com',
+        port: 8443,
+        protocol: 'https:'
+      });
     });
 
-    it('should configure proxy agent with authentication', () => {
+    it('should configure proxy authentication from explicit credentials', () => {
       const proxyConfig = new ProxyConfig({ 
         proxyUrl: 'http://proxy.example.com:8080',
         proxyUsername: 'user',
         proxyPassword: 'pass'
       });
-      const agent = proxyConfig.getProxyAgent();
-      expect(agent).toBeDefined();
-      // Note: We can't easily test the internal configuration without exposing internals
+      const config = proxyConfig.getAxiosProxyConfig();
+
+      expect(config).toEqual({
+        host: 'proxy.example.com',
+        port: 8080,
+        protocol: 'http:',
+        auth: {
+          username: 'user',
+          password: 'pass'
+        }
+      });
+    });
+
+    it('should use default ports when the proxy URL omits them', () => {
+      const httpConfig = new ProxyConfig({ proxyUrl: 'http://proxy.example.com' }).getAxiosProxyConfig();
+      const httpsConfig = new ProxyConfig({ proxyUrl: 'https://proxy.example.com' }).getAxiosProxyConfig();
+
+      expect(httpConfig?.port).toBe(80);
+      expect(httpsConfig?.port).toBe(443);
+    });
+
+    it('should extract credentials from URL when explicit credentials are not provided', () => {
+      const proxyConfig = new ProxyConfig({
+        proxyUrl: 'http://urluser:urlpass@proxy.example.com:8080'
+      });
+      const config = proxyConfig.getAxiosProxyConfig();
+
+      expect(config).toEqual({
+        host: 'proxy.example.com',
+        port: 8080,
+        protocol: 'http:',
+        auth: {
+          username: 'urluser',
+          password: 'urlpass'
+        }
+      });
+    });
+
+    it('should prefer explicit credentials over URL-embedded credentials', () => {
+      const proxyConfig = new ProxyConfig({
+        proxyUrl: 'http://urluser:urlpass@proxy.example.com:8080',
+        proxyUsername: 'explicituser',
+        proxyPassword: 'explicitpass'
+      });
+      const config = proxyConfig.getAxiosProxyConfig();
+
+      expect(config?.auth).toEqual({
+        username: 'explicituser',
+        password: 'explicitpass'
+      });
+    });
+
+    it('should decode percent-encoded credentials from URL', () => {
+      const proxyConfig = new ProxyConfig({
+        proxyUrl: 'http://user%40domain:p%40ss%3Aword@proxy.example.com:8080'
+      });
+      const config = proxyConfig.getAxiosProxyConfig();
+
+      expect(config?.auth).toEqual({
+        username: 'user@domain',
+        password: 'p@ss:word'
+      });
+    });
+
+    it('should handle URL with username but no password and no explicit credentials', () => {
+      const proxyConfig = new ProxyConfig({
+        proxyUrl: 'http://onlyuser@proxy.example.com:8080'
+      });
+      const config = proxyConfig.getAxiosProxyConfig();
+
+      expect(config).toEqual({
+        host: 'proxy.example.com',
+        port: 8080,
+        protocol: 'http:',
+        auth: {
+          username: 'onlyuser',
+          password: ''
+        }
+      });
+    });
+
+    it('should throw an error for a malformed proxy URL', () => {
+      const proxyConfig = new ProxyConfig({ proxyUrl: 'not-a-valid-url' });
+
+      expect(() => proxyConfig.getAxiosProxyConfig()).toThrow('Invalid proxy URL');
+    });
+  });
+
+  describe('getAxiosConfig', () => {
+    it('should return proxy:false when no proxy URL is configured', () => {
+      const proxyConfig = new ProxyConfig();
+
+      expect(proxyConfig.getAxiosConfig()).toEqual({ proxy: false });
+    });
+
+    it('should return Axios proxy settings when a proxy URL is configured', () => {
+      const proxyConfig = new ProxyConfig({ proxyUrl: 'http://proxy.example.com:8080' });
+
+      expect(proxyConfig.getAxiosConfig()).toEqual({
+        proxy: {
+          host: 'proxy.example.com',
+          port: 8080,
+          protocol: 'http:'
+        }
+      });
     });
   });
 });

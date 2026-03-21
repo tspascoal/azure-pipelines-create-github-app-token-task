@@ -27,8 +27,8 @@ export class GitHubService {
             }
         };
 
-        // Apply proxy configuration if available
-        if (options.proxy?.hasProxyConfiguration()) {
+        // Apply proxy configuration (explicitly disables Axios env-var proxy when unconfigured)
+        if (options.proxy) {
             const proxyConfig = options.proxy.getAxiosConfig();
             Object.assign(axiosOptions, proxyConfig);
         }
