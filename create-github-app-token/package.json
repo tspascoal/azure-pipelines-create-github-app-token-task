@@ -26,11 +26,11 @@
     "@types/node": "^25.*",
     "@types/q": "^1.5.8",
     "@vercel/ncc": "^0.38.4",
-    "jest": "^30.3.0",
+    "jest": "^30.4.2",
     "jest-environment-node": "^30.3.0",
-    "jest-junit": "^16.0.0",
-    "nock": "^14.0.11",
-    "ts-jest": "^29.4.6",
-    "typescript": "^5.9.3"
+    "jest-junit": "^17.0.0",
+    "nock": "^14.0.15",
+    "ts-jest": "^29.4.9",
+    "typescript": "^6.0.3"
   }
 }
