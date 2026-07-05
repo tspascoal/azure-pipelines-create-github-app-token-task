@@ -25,7 +25,7 @@
     "@types/nock": "^11.1.0",
     "@types/node": "^26.*",
     "@types/q": "^1.5.8",
-    "@vercel/ncc": "^0.44.0",
+    "@vercel/ncc": "^0.44.1",
     "jest": "^30.4.2",
     "jest-environment-node": "^30.3.0",
     "jest-junit": "^17.0.0",
