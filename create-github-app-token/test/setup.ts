@@ -18,6 +18,7 @@ jest.mock('azure-pipelines-task-lib/task', () => ({
   setVariable: jest.fn(),
   setTaskVariable: jest.fn(),
   getTaskVariable: jest.fn(),
+  getEndpointUrl: jest.fn(),
   getEndpointAuthorization: jest.fn(),
   getHttpProxyConfiguration: jest.fn(),
   debug: jest.fn(),
