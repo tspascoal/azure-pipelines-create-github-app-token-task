@@ -92,11 +92,11 @@ describe('run task logic', () => {
         }
       });
 
+      mockedTl.getEndpointUrl.mockReturnValue('https://api.github.com/');
       mockedTl.getEndpointAuthorization.mockReturnValue({
         parameters: {
           'certificate': 'mock-pem-key',
           'appClientId': 'test-app-id',
-          'url': 'https://api.github.com/'
         }
       } as any);
 
@@ -845,11 +845,11 @@ describe('run task logic', () => {
         }
       });
 
+      mockedTl.getEndpointUrl.mockReturnValue(customBaseUrl);
       mockedTl.getEndpointAuthorization.mockReturnValue({
         parameters: {
           'certificate': 'mock-pem-key',
           'appClientId': 'test-app-id',
-          'url': customBaseUrl
         }
       } as any);
 

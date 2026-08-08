@@ -76,7 +76,7 @@ async function run() {
       if (endpoint) {
         privateKey = endpoint.parameters['certificate'];
         appClientId = endpoint.parameters['appClientId'];
-        baseUrl = endpoint.parameters['url'] || baseUrl;
+        baseUrl = tl.getEndpointUrl(connectedServiceName, true) || baseUrl;
 
         const limitPermissions = endpoint.parameters['limitPermissions'];
         if (limitPermissions) {
