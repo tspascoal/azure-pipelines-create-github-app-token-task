@@ -16,7 +16,7 @@
   "description": "",
   "dependencies": {
     "axios": "^1.19.0",
-    "azure-pipelines-task-lib": "^5.278.0",
+    "azure-pipelines-task-lib": "^5.278.2",
     "jsonwebtoken": "^9.0.3"
   },
   "devDependencies": {
