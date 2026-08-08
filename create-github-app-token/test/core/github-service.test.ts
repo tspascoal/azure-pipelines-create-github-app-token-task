@@ -1,5 +1,6 @@
 import { GitHubService } from '../../src/core/github-service';
 import { ProxyConfig } from '../../src/core/proxy-config';
+import * as constants from '../../src/utils/constants';
 import * as tl from 'azure-pipelines-task-lib/task';
 import * as jwt from 'jsonwebtoken';
 import nock from 'nock';
