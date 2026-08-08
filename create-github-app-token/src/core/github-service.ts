@@ -59,6 +59,8 @@ export class GitHubService {
      * - https://docs.github.com/en/enterprise-cloud@latest/rest/apps/apps?apiVersion=2026-03-10#get-an-enterprise-installation-for-the-authenticated-app
      * 
      * @param jwtToken - The JSON Web Token (JWT) used for authentication with the GitHub API.
+     * @param _appClientId - Unused. The GitHub App client (or app) id is kept only to preserve the method signature
+     *                       for existing callers, since the installation lookup is fully driven by the JWT and owner.
      * @param owner - The owner of the repository, organization, or enterprise (username, organization name, or enterprise slug).
      * @param accountType - The type of account: 'org', 'user', or 'enterprise'.
      * @param repositories - An optional array of repository names to narrow down the installation ID retrieval.
@@ -124,7 +126,7 @@ export class GitHubService {
             this.dumpHeaders(err.response?.headers);
 
             let message = '';
-            if (err.status === 404) {
+            if (err.response?.status === 404) {
                 let targetType = 'account';
                 if (accountType.toLowerCase() === constants.ACCOUNT_TYPE_ORG) {
                     targetType = 'Organization';
