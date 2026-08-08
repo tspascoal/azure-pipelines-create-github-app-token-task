@@ -107,7 +107,7 @@ mockprivatekeydata
           .reply(200, mockInstallationResponse);
 
         const service = new GitHubService(baseUrl);
-        const result = await service.getInstallationId(mockJwtToken, 'test-app-id', owner, 'org');
+        const result = await service.getInstallationId(mockJwtToken, owner, 'org');
 
         expect(result).toBe(installationId);
       });
@@ -120,7 +120,7 @@ mockprivatekeydata
         const service = new GitHubService(baseUrl);
         
         await expect(
-          service.getInstallationId(mockJwtToken, 'test-app-id', owner, 'org')
+          service.getInstallationId(mockJwtToken, owner, 'org')
         ).rejects.toThrow(`GitHub App not found for Organization ${owner}. Please verify the installation.`);
       });
     });
@@ -132,7 +132,7 @@ mockprivatekeydata
           .reply(200, mockInstallationResponse);
 
         const service = new GitHubService(baseUrl);
-        const result = await service.getInstallationId(mockJwtToken, 'test-app-id', user, 'user');
+        const result = await service.getInstallationId(mockJwtToken, user, 'user');
 
         expect(result).toBe(installationId);
       });
@@ -145,7 +145,7 @@ mockprivatekeydata
         const service = new GitHubService(baseUrl);
         
         await expect(
-          service.getInstallationId(mockJwtToken, 'test-app-id', owner, 'user')
+          service.getInstallationId(mockJwtToken, owner, 'user')
         ).rejects.toThrow(`GitHub App not found for account ${owner}. Please verify the installation.`);
       });
     });
@@ -159,7 +159,7 @@ mockprivatekeydata
           .reply(200, mockInstallationResponse);
 
         const service = new GitHubService(baseUrl);
-        const result = await service.getInstallationId(mockJwtToken, 'test-app-id', owner, "org", [repo]);
+        const result = await service.getInstallationId(mockJwtToken, owner, "org", [repo]);
 
         expect(result).toBe(installationId);
       });
@@ -169,7 +169,7 @@ mockprivatekeydata
         const service = new GitHubService(baseUrl);
         
         await expect(
-          service.getInstallationId(mockJwtToken, 'test-app-id', owner, "org", [invalidRepo])
+          service.getInstallationId(mockJwtToken, owner, "org", [invalidRepo])
         ).rejects.toThrow(`Invalid repository name format: ${invalidRepo}. It can only contain ASCII letters, digits, and the characters ., -, and _`);
       });
 
@@ -181,7 +181,7 @@ mockprivatekeydata
         const service = new GitHubService(baseUrl);
         
         await expect(
-          service.getInstallationId(mockJwtToken, 'test-app-id', owner, "org", [repo])
+          service.getInstallationId(mockJwtToken, owner, "org", [repo])
         ).rejects.toThrow(`GitHub App not found for Organization ${owner}. Please verify the installation and repository access.`);
       });
 
@@ -193,7 +193,7 @@ mockprivatekeydata
         const service = new GitHubService(baseUrl);
         
         await expect(
-          service.getInstallationId(mockJwtToken, 'test-app-id', owner, 'enterprise', [repo])
+          service.getInstallationId(mockJwtToken, owner, 'enterprise', [repo])
         ).rejects.toThrow(`GitHub App not found for Enterprise ${owner}. Please verify the installation and repository access.`);
       });
     });
@@ -206,7 +206,7 @@ mockprivatekeydata
       const service = new GitHubService(baseUrl);
       
       await expect(
-        service.getInstallationId(mockJwtToken, 'test-app-id', owner, "org")
+        service.getInstallationId(mockJwtToken, owner, "org")
       ).rejects.toThrow('Failed to get installation ID:');
     });
 
@@ -234,7 +234,7 @@ mockprivatekeydata
           .reply(200, mockEnterpriseInstallation);
 
         const service = new GitHubService(baseUrl);
-        const result = await service.getInstallationId(mockJwtToken, 'test-app-id', enterprise, 'enterprise');
+        const result = await service.getInstallationId(mockJwtToken, enterprise, 'enterprise');
 
         expect(result).toBe(installationId);
       });
@@ -247,7 +247,7 @@ mockprivatekeydata
         const service = new GitHubService(baseUrl);
 
         await expect(
-          service.getInstallationId(mockJwtToken, 'test-app-id', enterprise, 'enterprise')
+          service.getInstallationId(mockJwtToken, enterprise, 'enterprise')
         ).rejects.toThrow(`GitHub App not found for Enterprise ${enterprise}. Please verify the installation.`);
       });
     });
@@ -475,7 +475,7 @@ mockprivatekeydata
         });
 
       const service = new GitHubService(baseUrl);
-      await service.getInstallationId(mockJwtToken, 'test-app-id', 'test-org', 'org');
+      await service.getInstallationId(mockJwtToken, 'test-org', 'org');
 
       expect(scope.isDone()).toBe(true);
     });
@@ -495,7 +495,7 @@ mockprivatekeydata
         });
 
       const service = new GitHubService(baseUrl);
-      await service.getInstallationId(mockJwtToken, 'test-app-id', 'test-org', 'org');
+      await service.getInstallationId(mockJwtToken, 'test-org', 'org');
 
       expect(scope.isDone()).toBe(true);
     });
@@ -541,7 +541,6 @@ mockprivatekeydata
       // Get installation ID using first repository
       const actualInstallationId = await service.getInstallationId(
         jwtToken, 
-        'test-app-id',
         owner, 
         'org', 
         [repositories[0]]
@@ -604,7 +603,7 @@ mockprivatekeydata
           }
         );
 
-      const result = await service.getInstallationId('jwt-token', 'test-app-id', owner, "org");
+      const result = await service.getInstallationId('jwt-token', owner, "org");
       expect(result).toBe(12345);
       
       // Headers should be logged in debug mode (tested in main GitHubService tests)
@@ -632,7 +631,7 @@ mockprivatekeydata
           }
         );
 
-      const result = await service.getInstallationId('jwt-token', 'test-app-id', owner, 'org');
+      const result = await service.getInstallationId('jwt-token', owner, 'org');
       expect(result).toBe(12345);
       expect(mockedTl.debug).toHaveBeenCalledWith(expect.stringContaining('Header:'));
     });
@@ -650,7 +649,7 @@ mockprivatekeydata
           permissions: {}
         });
 
-      const result = await service.getInstallationId('jwt-token', 'test-app-id', owner, "org");
+      const result = await service.getInstallationId('jwt-token', owner, "org");
       expect(result).toBe(12345);
     });
 
@@ -673,7 +672,7 @@ mockprivatekeydata
           target_type: 'Organization'
         });
 
-      const result = await service.getInstallationId('jwt-token', 'test-app-id', owner, "org");
+      const result = await service.getInstallationId('jwt-token', owner, "org");
       expect(result).toBe(12345);
     });
   });

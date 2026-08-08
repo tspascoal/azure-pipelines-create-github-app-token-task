@@ -193,7 +193,7 @@ async function run() {
       repositories = repositoriesList.split(',').map(repo => repo.trim());
     }
 
-    const installationId = await githubService.getInstallationId(jwtToken, appClientId, owner, accountType, repositories);
+    const installationId = await githubService.getInstallationId(jwtToken, owner, accountType, repositories);
     console.log(`Found installation ID: ${installationId}`);
 
     const { token, expiresAt } = await githubService.getInstallationToken(jwtToken, installationId, repositories, permissions);

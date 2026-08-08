@@ -59,8 +59,6 @@ export class GitHubService {
      * - https://docs.github.com/en/enterprise-cloud@latest/rest/apps/apps?apiVersion=2026-03-10#get-an-enterprise-installation-for-the-authenticated-app
      * 
      * @param jwtToken - The JSON Web Token (JWT) used for authentication with the GitHub API.
-     * @param _appClientId - Unused. The GitHub App client (or app) id is kept only to preserve the method signature
-     *                       for existing callers, since the installation lookup is fully driven by the JWT and owner.
      * @param owner - The owner of the repository, organization, or enterprise (username, organization name, or enterprise slug).
      * @param accountType - The type of account: 'org', 'user', or 'enterprise'.
      * @param repositories - An optional array of repository names to narrow down the installation ID retrieval.
@@ -68,7 +66,7 @@ export class GitHubService {
      * @returns A promise that resolves to the installation ID of the GitHub App.
      * @throws An error if the repository name is invalid or if the API request fails.
      */
-    async getInstallationId(jwtToken: string, _appClientId: string, owner: string, accountType: string, repositories: string[] = []): Promise<number> {
+    async getInstallationId(jwtToken: string, owner: string, accountType: string, repositories: string[] = []): Promise<number> {
         let url = undefined
         let groupName = '';
         let id = 0;
