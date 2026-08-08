@@ -92,7 +92,7 @@
                             {
                                 "id": "limitPermissions",
                                 "name": "Limit Token Permissions",
-                                "description": "Optional JSON object to restrict token permissions. If empty will use app permissions or permissions set at task level. If provided, this will override any permissions set in the task input Format: {\"permission\":\"accesstype\"} EG: {\"contents\":\"read\",\"issues\":\"write\"}. see permissions parameter https://docs.github.com/en/rest/apps/apps?apiVersion=2022-11-28#create-an-installation-access-token-for-an-app for full list of permissions.",
+                                "description": "Optional JSON object to restrict token permissions. If empty will use app permissions or permissions set at task level. If provided, this will override any permissions set in the task input Format: {\"permission\":\"accesstype\"} EG: {\"contents\":\"read\",\"issues\":\"write\"}. see permissions parameter https://docs.github.com/en/rest/apps/apps?apiVersion=2026-03-10#create-an-installation-access-token-for-an-app for full list of permissions.",
                                 "inputMode": "textarea",
                                 "isConfidential": false,
                                 "validation": {

@@ -70,7 +70,7 @@ steps:
 | appClientId | No* | The GitHub App ID (required if not using service connection) |
 | certificate | No* | The PEM certificate content (required if not using service connection) |
 | certificateFile | No | Alternative to certificate - filename containing the PEM content |
-| permissions | No | JSON object to restrict token permissions. Format: {"contents":"read","issues":"write",.....}. <br>Note: If permissions are set in the service connection, those will override any permissions specified here.<br> See permissions [Create an installation access token for an app](https://docs.github.com/en/rest/apps/apps?apiVersion=2022-11-28#create-an-installation-access-token-for-an-app) parameter  for full list of permissions |
+| permissions | No | JSON object to restrict token permissions. Format: {"contents":"read","issues":"write",.....}. <br>Note: If permissions are set in the service connection, those will override any permissions specified here.<br> See permissions [Create an installation access token for an app](https://docs.github.com/en/rest/apps/apps?apiVersion=2026-03-10#create-an-installation-access-token-for-an-app) parameter  for full list of permissions |
 | skipTokenRevoke | No | If true, the token will not be automatically revoked at the end of the job |
 
 *Required if githubAppConnection is not specified
@@ -114,7 +114,7 @@ steps:
     githubAppConnection: 'MyGitHubAppConnection'
 - bash: |
     gh api \
-    --method POST -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" \
+    --method POST -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2026-03-10" \
     /repos/MyOrg/myRepo/issues \
     -f "title=Found a bug" -f "body=I'm having a problem with this."
   displayName: 'Create issue using GitHub CLI'
@@ -203,7 +203,7 @@ steps:
     owner: 'my-enterprise'  # Enterprise slug/name (required for enterprise)
 - bash: |
     gh api \
-    --method GET -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" \
+    --method GET -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2026-03-10" \
     /enterprises/my-enterprise
   displayName: 'Access enterprise using GitHub CLI'
   env:
@@ -256,8 +256,6 @@ Common issues and solutions:
    - Cannot use `repositories` parameter with enterprise account type (tokens are enterprise-scoped)
    - Cannot use `forceRepoScope` in service connections with enterprise account type
    - The `owner` parameter is mandatory for enterprise account type
-8. **Rate limiting during installation lookup**: Enterprise installations use pagination which may hit rate limits with many installations. The task automatically handles rate limiting by waiting if the reset time is within 5 minutes.
-
 ### Account Type Differences
 
 | Feature | Organization | User | Enterprise |
@@ -265,7 +263,7 @@ Common issues and solutions:
 | Repository scoping | ✅ Supported | ✅ Supported | ❌ Not supported |
 | forceRepoScope | ✅ Supported | ✅ Supported | ❌ Not supported |
 | Owner parameter | Optional* | Optional* | **Required** |
-| Direct API lookup | ✅ Yes | ✅ Yes | ❌ Uses pagination workaround |
+| Direct API lookup | ✅ Yes | ✅ Yes | ✅ Yes |
 
 *Owner is optional for org/user if using GitHub repository provider (auto-extracted from Build.Repository.Name)
 
