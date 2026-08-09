@@ -3,6 +3,7 @@ import axios, { AxiosInstance } from 'axios';
 import * as jwt from 'jsonwebtoken';
 import { ProxyConfig } from './proxy-config';
 import { validateRepositoryName } from '../utils/validation';
+import { normalizeGitHubApiUrl } from '../utils/github';
 import * as constants from '../utils/constants';
 import { VERSION, USER_AGENT } from '../utils/version';
 
@@ -18,7 +19,7 @@ export class GitHubService {
         if (!baseUrl) {
             throw new Error('GitHub API base URL is required');
         }
-        this.baseUrl = baseUrl.replace(/\/+$/, '');
+        this.baseUrl = normalizeGitHubApiUrl(baseUrl);
 
         const axiosOptions: any = {
             headers: {

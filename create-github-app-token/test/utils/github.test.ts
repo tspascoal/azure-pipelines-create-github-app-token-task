@@ -1,4 +1,4 @@
-import { getRepoName, getOwnerName } from '../../src/utils/github';
+import { getGitHubHost, getRepoName, getOwnerName, normalizeGitHubApiUrl } from '../../src/utils/github';
 
 describe('github utilities', () => {
   describe('getRepoName', () => {
@@ -22,6 +22,22 @@ describe('github utilities', () => {
     it('should handle owner names with special characters', () => {
       const result = getOwnerName('org-name_with.dots/repo');
       expect(result).toBe('org-name_with.dots');
+    });
+  });
+
+  describe('normalizeGitHubApiUrl', () => {
+    it('should trim whitespace and trailing slashes', () => {
+      expect(normalizeGitHubApiUrl('  https://github.example.com/api/v3///  ')).toBe('https://github.example.com/api/v3');
+    });
+  });
+
+  describe('getGitHubHost', () => {
+    it.each([
+      ['GitHub Enterprise Cloud', 'https://api.github.com', 'github.com'],
+      ['GitHub Enterprise Cloud with data residency', 'https://api.company.ghe.com', 'company.ghe.com'],
+      ['GitHub Enterprise Server', 'https://github.company.com/api/v3', 'github.company.com']
+    ])('should derive the host for %s', (_scenario, apiUrl, expectedHost) => {
+      expect(getGitHubHost(apiUrl)).toBe(expectedHost);
     });
   });
 });

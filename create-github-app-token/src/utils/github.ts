@@ -17,3 +17,21 @@ export function getRepoName(nwo: string) {
 export function getOwnerName(nwo: string) {
   return nwo.split("/")[0];
 }
+
+/**
+ * Normalizes a GitHub API base URL for use when constructing request URLs.
+ */
+export function normalizeGitHubApiUrl(baseUrl: string) {
+  return baseUrl.trim().replace(/\/+$/, '');
+}
+
+/**
+ * Derives the GitHub hostname expected by GitHub CLI from an API base URL.
+ */
+export function getGitHubHost(apiUrl: string) {
+  const apiHostname = new URL(apiUrl).hostname;
+
+  return apiHostname === 'api.github.com' || (apiHostname.startsWith('api.') && apiHostname.endsWith('.ghe.com'))
+    ? apiHostname.substring(4)
+    : apiHostname;
+}

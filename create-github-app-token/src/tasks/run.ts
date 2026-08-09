@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import { GitHubService } from '../core/github-service';
 import { ProxyConfig } from '../core/proxy-config';
 import * as constants from '../utils/constants';
-import { getRepoName, getOwnerName } from '../utils/github';
+import { getGitHubHost, getRepoName, getOwnerName, normalizeGitHubApiUrl } from '../utils/github';
 import { validateAccountType } from '../utils/validation';
 
 async function run() {
@@ -140,6 +140,9 @@ async function run() {
       }
     }
 
+    baseUrl = normalizeGitHubApiUrl(baseUrl);
+    const githubHost = getGitHubHost(baseUrl);
+
     console.log(`Base URL: ${baseUrl}`);
 
     if (!privateKey && privateKeyInput) {
@@ -208,6 +211,8 @@ async function run() {
     tl.setVariable(constants.INSTALLATIONID_OUTPUT_VARNAME, installationId.toString(), false);
     tl.setVariable(constants.INSTALLATION_TOKEN_OUTPUT_VARNAME, token, true); // secret
     tl.setVariable(constants.TOKEN_EXPIRATION_OUTPUT_VARNAME, expiresAt, false);
+    tl.setVariable(constants.GITHUB_HOST_OUTPUT_VARNAME, githubHost, false);
+    tl.setVariable(constants.GITHUB_API_URL_OUTPUT_VARNAME, baseUrl, false);
 
     // Save state for post job
     tl.setTaskVariable(constants.INSTALLATION_TOKEN_OUTPUT_VARNAME, token, true); // secret
