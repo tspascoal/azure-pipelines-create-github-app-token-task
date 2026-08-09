@@ -85,6 +85,16 @@ steps:
 | installationToken | The generated GitHub App installation token |
 | installationId | The ID of the GitHub App installation |
 | tokenExpiration | The expiration date and time of the generated token (ISO 8601 format) |
+| GitHubHost | The GitHub hostname for [`GH_HOST`](https://cli.github.com/manual/gh_help_environment), such as `github.com`, `company.ghe.com`, or `github.company.com` |
+| GitHubAPIUrl | The normalized GitHub REST API base URL without a trailing slash, suitable for API calls in scripts |
+
+The URL outputs follow GitHub's API endpoint conventions:
+
+| GitHub environment | API URL / `GitHubAPIUrl` | `GitHubHost` |
+|--------------------|--------------------------|--------------|
+| GitHub Enterprise Cloud | `https://api.github.com` | `github.com` |
+| GitHub Enterprise Cloud with data residency | `https://api.company.ghe.com` | `company.ghe.com` |
+| GitHub Enterprise Server | `https://gh.company.com/api/v3` | `gh.company.com` |
 
 ### Service Connection Setup (optional)
 
@@ -123,6 +133,7 @@ steps:
   displayName: 'Create issue using GitHub CLI'
   env:
     GH_TOKEN: $(token.installationToken)
+    GH_HOST: $(token.GitHubHost)
 ```
 
 ### Using Direct Certificate Input and restriction permissions
@@ -142,11 +153,17 @@ For a GitHub Enterprise Server instance, set `apiUrl` when using direct inputs:
 ```yaml
 steps:
 - task: create-github-app-token@1
+  name: token
   inputs:
     owner: 'MyOrg'
     appClientId: 'lv2313qqwqeqweqw'
     certificate: '$(githubAppPem)'
-    apiUrl: 'https://github.example.com/api/v3'
+    apiUrl: 'https://github.example.com/api/v3/'
+- bash: gh api /user
+  displayName: 'Call the GitHub Enterprise Server API'
+  env:
+    GH_ENTERPRISE_TOKEN: $(token.installationToken)
+    GH_HOST: $(token.GitHubHost)
 ```
 
 The `apiUrl` input is only used when `githubAppConnection` is not defined. Configure the API URL on the service connection when using one.
@@ -179,7 +196,8 @@ steps:
     githubAppConnection: 'MyGitHubAppConnection'
 
 - script: |
-    curl -H "Authorization: Bearer $(githubAuth.installationToken)" https://api.github.com/repos/MyOrg/MyRepo/issues | jq
+    curl -H "Authorization: Bearer $(githubAuth.installationToken)" \
+      "$(githubAuth.GitHubAPIUrl)/repos/MyOrg/MyRepo/issues" | jq
   displayName: 'List issues using cURL'
 ```
 
@@ -225,6 +243,7 @@ steps:
   displayName: 'Access enterprise using GitHub CLI'
   env:
     GH_TOKEN: $(enterpriseToken.installationToken)
+    GH_HOST: $(enterpriseToken.GitHubHost)
 ```
 
 ### Enterprise with Direct Certificate Input

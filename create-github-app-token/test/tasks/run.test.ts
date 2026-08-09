@@ -102,7 +102,7 @@ describe('run task logic', () => {
 
       await run();
 
-      expect(MockedGitHubService).toHaveBeenCalledWith('https://api.github.com/', { proxy: mockProxyConfig });
+      expect(MockedGitHubService).toHaveBeenCalledWith('https://api.github.com', { proxy: mockProxyConfig });
       expect(mockGitHubService.generateJWT).toHaveBeenCalledWith('test-app-id', 'mock-pem-key');
       expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'test-org', "org", []);
       expect(mockGitHubService.getInstallationToken).toHaveBeenCalledWith('mock.jwt.token', 12345, [], undefined);
@@ -111,6 +111,8 @@ describe('run task logic', () => {
       expect(mockedTl.setVariable).toHaveBeenCalledWith(constants.INSTALLATIONID_OUTPUT_VARNAME, '12345', false);
       expect(mockedTl.setVariable).toHaveBeenCalledWith(constants.INSTALLATION_TOKEN_OUTPUT_VARNAME, 'ghs_mock_installation_token', true);
       expect(mockedTl.setVariable).toHaveBeenCalledWith(constants.TOKEN_EXPIRATION_OUTPUT_VARNAME, '2024-01-01T13:00:00Z', false);
+      expect(mockedTl.setVariable).toHaveBeenCalledWith(constants.GITHUB_HOST_OUTPUT_VARNAME, 'github.com', false);
+      expect(mockedTl.setVariable).toHaveBeenCalledWith(constants.GITHUB_API_URL_OUTPUT_VARNAME, 'https://api.github.com', false);
     });
 
     it('should complete successfully with direct certificate input', async () => {
@@ -143,9 +145,26 @@ describe('run task logic', () => {
       expect(mockedTl.setResult).not.toHaveBeenCalled();
     });
 
-    it('should use a custom API URL with direct inputs', async () => {
-      const customBaseUrl = 'https://github.enterprise.com/api/v3';
-
+    it.each([
+      {
+        scenario: 'standard GitHub Enterprise Cloud',
+        apiUrl: 'https://api.github.com/',
+        expectedApiUrl: 'https://api.github.com',
+        expectedHost: 'github.com'
+      },
+      {
+        scenario: 'GitHub Enterprise Cloud with data residency',
+        apiUrl: 'https://api.company.ghe.com/',
+        expectedApiUrl: 'https://api.company.ghe.com',
+        expectedHost: 'company.ghe.com'
+      },
+      {
+        scenario: 'GitHub Enterprise Server',
+        apiUrl: 'https://github.company.com/api/v3/',
+        expectedApiUrl: 'https://github.company.com/api/v3',
+        expectedHost: 'github.company.com'
+      }
+    ])('should expose the API URL and GitHub host for $scenario', async ({ apiUrl, expectedApiUrl, expectedHost }) => {
       mockedTl.getInput.mockImplementation((name: string) => {
         switch (name) {
           case 'owner':
@@ -155,7 +174,7 @@ describe('run task logic', () => {
           case 'certificate':
             return 'mock-pem-key';
           case 'apiUrl':
-            return customBaseUrl;
+            return apiUrl;
           default:
             return '';
         }
@@ -163,10 +182,12 @@ describe('run task logic', () => {
 
       await run();
 
-      expect(console.log).toHaveBeenCalledWith(`Base URL: ${customBaseUrl}`);
-      expect(ProxyConfig.fromAzurePipelines).toHaveBeenCalledWith(customBaseUrl);
-      expect(MockedGitHubService).toHaveBeenCalledWith(customBaseUrl, { proxy: mockProxyConfig });
-      expect(mockedTl.setTaskVariable).toHaveBeenCalledWith(constants.BASE_URL_TASK_VARNAME, customBaseUrl);
+      expect(console.log).toHaveBeenCalledWith(`Base URL: ${expectedApiUrl}`);
+      expect(ProxyConfig.fromAzurePipelines).toHaveBeenCalledWith(expectedApiUrl);
+      expect(MockedGitHubService).toHaveBeenCalledWith(expectedApiUrl, { proxy: mockProxyConfig });
+      expect(mockedTl.setVariable).toHaveBeenCalledWith(constants.GITHUB_API_URL_OUTPUT_VARNAME, expectedApiUrl, false);
+      expect(mockedTl.setVariable).toHaveBeenCalledWith(constants.GITHUB_HOST_OUTPUT_VARNAME, expectedHost, false);
+      expect(mockedTl.setTaskVariable).toHaveBeenCalledWith(constants.BASE_URL_TASK_VARNAME, expectedApiUrl);
     });
 
     it('should use the default API URL when the direct input is empty', async () => {

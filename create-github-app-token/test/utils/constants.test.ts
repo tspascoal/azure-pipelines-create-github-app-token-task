@@ -27,6 +27,14 @@ describe('constants', () => {
     it('should define token expiration output variable name', () => {
       expect(constants.TOKEN_EXPIRATION_OUTPUT_VARNAME).toBe('tokenExpiration');
     });
+
+    it('should define GitHub host output variable name', () => {
+      expect(constants.GITHUB_HOST_OUTPUT_VARNAME).toBe('GitHubHost');
+    });
+
+    it('should define GitHub API URL output variable name', () => {
+      expect(constants.GITHUB_API_URL_OUTPUT_VARNAME).toBe('GitHubAPIUrl');
+    });
   });
 
   describe('task variable names', () => {

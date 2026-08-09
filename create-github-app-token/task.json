@@ -10,7 +10,7 @@
     "version": {
         "Major": 1,
         "Minor": 2,
-        "Patch": 0
+        "Patch": 1
     },
     "instanceNameFormat": "Create GitHub App Installation Token",
     "groups": [
@@ -116,6 +116,14 @@
         {
             "name": "tokenExpiration",
             "description": "The expiration date and time of the generated token (ISO 8601 format)"
+        },
+        {
+            "name": "GitHubHost",
+            "description": "The GitHub hostname for use with GitHub CLI's GH_HOST environment variable"
+        },
+        {
+            "name": "GitHubAPIUrl",
+            "description": "The normalized GitHub API base URL without a trailing slash"
         }
     ],
     "execution": {
