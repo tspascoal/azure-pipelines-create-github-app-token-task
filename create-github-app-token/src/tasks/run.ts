@@ -37,6 +37,10 @@ async function run() {
     const skipTokenRevoke = tl.getBoolInput('skipTokenRevoke', false);
     const permissionsInput = tl.getInput('permissions', false);
 
+    if (!connectedServiceName) {
+      baseUrl = tl.getInput('apiUrl', false)?.trim() || baseUrl;
+    }
+
     let permissions: { [key: string]: string } | undefined = undefined;
     if (permissionsInput) {
       try {
@@ -123,7 +127,6 @@ async function run() {
           repositoriesList = forcedRepo;
         }
 
-        console.log(`Base URL: ${baseUrl}`);
         console.log(`App ID from service connection: ${appClientId}`);
 
         console.log('##[endgroup]')
@@ -136,6 +139,8 @@ async function run() {
         return;
       }
     }
+
+    console.log(`Base URL: ${baseUrl}`);
 
     if (!privateKey && privateKeyInput) {
       console.log('Using private key from certificate input');

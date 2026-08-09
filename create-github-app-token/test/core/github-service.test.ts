@@ -51,15 +51,44 @@ mockprivatekeydata
       expect(() => new GitHubService('')).toThrow('GitHub API base URL is required');
     });
 
-    it('should normalize base URL by removing trailing slash', () => {
-      const service = new GitHubService('https://api.github.com/');
-      expect(service).toBeInstanceOf(GitHubService);
-    });
-
     it('should create service with proxy configuration', () => {
       const proxyConfig = new ProxyConfig({ proxyUrl: 'http://proxy.example.com:8080' });
       const service = new GitHubService(baseUrl, { proxy: proxyConfig });
       expect(service).toBeInstanceOf(GitHubService);
+    });
+  });
+
+  describe.each([
+    ['without a trailing slash', 'https://github.enterprise.com/api/v3'],
+    ['with a trailing slash', 'https://github.enterprise.com/api/v3/'],
+    ['with repeated trailing slashes', 'https://github.enterprise.com/api/v3///']
+  ])('base URL normalization %s', (_scenario, overriddenBaseUrl) => {
+    it('builds every API endpoint with exactly one separating slash', async () => {
+      const normalizedBaseUrl = 'https://github.enterprise.com/api/v3';
+      const installationId = 12345;
+      const scope = nock(normalizedBaseUrl)
+        .get('/orgs/test-org/installation')
+        .reply(200, {
+          id: installationId,
+          repository_selection: 'all',
+          permissions: { contents: 'read' }
+        })
+        .post(`/app/installations/${installationId}/access_tokens`, {})
+        .reply(200, {
+          token: 'ghs_mock_installation_token',
+          expires_at: '2024-01-01T13:00:00Z',
+          repository_selection: 'all',
+          permissions: { contents: 'read' }
+        })
+        .delete('/installation/token')
+        .reply(204);
+
+      const service = new GitHubService(overriddenBaseUrl);
+      await service.getInstallationId(mockJwtToken, 'test-org', 'org');
+      await service.getInstallationToken(mockJwtToken, installationId);
+      await service.revokeInstallationToken('ghs_mock_installation_token');
+
+      expect(scope.isDone()).toBe(true);
     });
   });
 
@@ -502,12 +531,6 @@ mockprivatekeydata
   });
 
   describe('advanced integration scenarios', () => {
-    it('should handle enterprise GitHub URL normalization', () => {
-      const enterpriseUrl = 'https://github.enterprise.com/api/v3/';
-      const enterpriseService = new GitHubService(enterpriseUrl);
-      expect(enterpriseService).toBeInstanceOf(GitHubService);
-    });
-
     it('should handle multiple repository installations', async () => {
       const owner = 'test-org';
       const repositories = ['repo1', 'repo2', 'repo3'];

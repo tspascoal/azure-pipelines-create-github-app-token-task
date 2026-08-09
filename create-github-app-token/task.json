@@ -9,8 +9,8 @@
     "author": "Tiago Pascoal",
     "version": {
         "Major": 1,
-        "Minor": 0,
-        "Patch": 8
+        "Minor": 2,
+        "Patch": 0
     },
     "instanceNameFormat": "Create GitHub App Installation Token",
     "groups": [
@@ -84,6 +84,16 @@
             "required": false,
             "helpMarkDown": "The GitHub App ID (found in the app settings)",
             "groupName": "withoutServiceConnection"
+        },
+        {
+            "name": "apiUrl",
+            "type": "string",
+            "label": "GitHub API URL",
+            "defaultValue": "https://api.github.com",
+            "required": false,
+            "helpMarkDown": "The GitHub API base URL. This input is only used when githubAppConnection is not defined.",
+            "groupName": "withoutServiceConnection",
+            "visibleRule": "githubAppConnection == ''"
         },
         {
             "name": "skipTokenRevoke",

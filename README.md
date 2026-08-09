@@ -10,6 +10,7 @@ Azure Pipelines extension to create a GitHub App installation tokens that can be
 - Generates GitHub App installation tokens for API authentication
 - Supports organization-wide, user-level, or enterprise-level tokens
 - Provides multiple authentication options (service connection or direct inputs)
+- Supports GitHub.com and custom GitHub API base URLs
 - Handles proxy configurations through environment variables
 - Secure handling of private keys and credentials
 - Cross-platform compatibility
@@ -56,6 +57,7 @@ steps:
     owner: 'your-org-name'
     appClientId: 'lv2313qqwqeqweqw'        # Your GitHub App ID
     certificate: '$(pem)'       # PEM content as variable
+    apiUrl: 'https://api.tenant.ghe.com/' # Optional; defaults to GitHub.com
     repositories: 'repo1,repo2' # Optional
 ```
 
@@ -70,6 +72,7 @@ steps:
 | appClientId | No* | The GitHub App ID (required if not using service connection) |
 | certificate | No* | The PEM certificate content (required if not using service connection) |
 | certificateFile | No | Alternative to certificate - filename containing the PEM content |
+| apiUrl | No | The GitHub API base URL. Defaults to `https://api.github.com`. **Only used when `githubAppConnection` is not defined.** When a service connection is used, its API URL takes precedence. |
 | permissions | No | JSON object to restrict token permissions. Format: {"contents":"read","issues":"write",.....}. <br>Note: If permissions are set in the service connection, those will override any permissions specified here.<br> See permissions [Create an installation access token for an app](https://docs.github.com/en/rest/apps/apps?apiVersion=2026-03-10#create-an-installation-access-token-for-an-app) parameter  for full list of permissions |
 | skipTokenRevoke | No | If true, the token will not be automatically revoked at the end of the job |
 
@@ -97,7 +100,7 @@ steps:
      > Permissions can only be downgraded from what the GitHub App has. For example, if the GitHub App has "read" access to contents, you cannot request "write" access. Attempting to request higher permissions than what the GitHub App has will result in a failure to obtain the token.
    - Scope to repository. If this is set then the repositories input is ignored and the token will be scoped to the repository where the pipeline is running. For example this can be useful if install the on all or some repositories but you don't want the pipeline to access other repositories.
      - **only** works if sources repository is GitHub. If you try to use with another source it will throw an error.
-   - Optionally change the API URL if not using github.com
+    - Optionally change the API URL if not using GitHub.com. This service connection URL is always used when the task's `githubAppConnection` input is defined; the task-level `apiUrl` input is ignored.
 5. Save the connection
 
 ![Service Connection](docs/images/gh-app-service-connection.png)
@@ -133,6 +136,20 @@ steps:
     certificate: '$(githubAppPem)'  # Variable containing PEM content
     permissions: '{"contents":"read","pulls":"write","issues":"write"}'
 ```
+
+For a GitHub Enterprise Server instance, set `apiUrl` when using direct inputs:
+
+```yaml
+steps:
+- task: create-github-app-token@1
+  inputs:
+    owner: 'MyOrg'
+    appClientId: 'lv2313qqwqeqweqw'
+    certificate: '$(githubAppPem)'
+    apiUrl: 'https://github.example.com/api/v3'
+```
+
+The `apiUrl` input is only used when `githubAppConnection` is not defined. Configure the API URL on the service connection when using one.
 
 ### Repository-Scoped Token and restricted permissions
 

@@ -143,6 +143,52 @@ describe('run task logic', () => {
       expect(mockedTl.setResult).not.toHaveBeenCalled();
     });
 
+    it('should use a custom API URL with direct inputs', async () => {
+      const customBaseUrl = 'https://github.enterprise.com/api/v3';
+
+      mockedTl.getInput.mockImplementation((name: string) => {
+        switch (name) {
+          case 'owner':
+            return 'test-org';
+          case 'appClientId':
+            return 'test-app-id';
+          case 'certificate':
+            return 'mock-pem-key';
+          case 'apiUrl':
+            return customBaseUrl;
+          default:
+            return '';
+        }
+      });
+
+      await run();
+
+      expect(console.log).toHaveBeenCalledWith(`Base URL: ${customBaseUrl}`);
+      expect(ProxyConfig.fromAzurePipelines).toHaveBeenCalledWith(customBaseUrl);
+      expect(MockedGitHubService).toHaveBeenCalledWith(customBaseUrl, { proxy: mockProxyConfig });
+      expect(mockedTl.setTaskVariable).toHaveBeenCalledWith(constants.BASE_URL_TASK_VARNAME, customBaseUrl);
+    });
+
+    it('should use the default API URL when the direct input is empty', async () => {
+      mockedTl.getInput.mockImplementation((name: string) => {
+        switch (name) {
+          case 'owner':
+            return 'test-org';
+          case 'appClientId':
+            return 'test-app-id';
+          case 'certificate':
+            return 'mock-pem-key';
+          default:
+            return '';
+        }
+      });
+
+      await run();
+
+      expect(MockedGitHubService).toHaveBeenCalledWith(constants.DEFAULT_API_URL, { proxy: mockProxyConfig });
+      expect(mockedTl.setTaskVariable).toHaveBeenCalledWith(constants.BASE_URL_TASK_VARNAME, constants.DEFAULT_API_URL);
+    });
+
     it('should complete successfully with certificate file', async () => {
       const mockPemContent = '-----BEGIN RSA PRIVATE KEY-----\nmock-key\n-----END RSA PRIVATE KEY-----';
       
@@ -833,6 +879,7 @@ describe('run task logic', () => {
 
     it('should handle custom base URL from service connection', async () => {
       const customBaseUrl = 'https://github.enterprise.com/api/v3';
+      const directInputBaseUrl = 'https://ignored.example.com/api/v3';
       
       mockedTl.getInput.mockImplementation((name: string) => {
         switch (name) {
@@ -840,6 +887,8 @@ describe('run task logic', () => {
             return 'test-connection';
           case 'owner':
             return 'test-org';
+          case 'apiUrl':
+            return directInputBaseUrl;
           default:
             return '';
         }
@@ -855,6 +904,8 @@ describe('run task logic', () => {
 
       await run();
 
+      expect(mockedTl.getInput).not.toHaveBeenCalledWith('apiUrl', false);
+      expect(console.log).toHaveBeenCalledWith(`Base URL: ${customBaseUrl}`);
       expect(MockedGitHubService).toHaveBeenCalledWith(customBaseUrl, { proxy: mockProxyConfig });
     });
 

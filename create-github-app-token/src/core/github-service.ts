@@ -18,7 +18,7 @@ export class GitHubService {
         if (!baseUrl) {
             throw new Error('GitHub API base URL is required');
         }
-        this.baseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+        this.baseUrl = baseUrl.replace(/\/+$/, '');
 
         const axiosOptions: any = {
             headers: {
