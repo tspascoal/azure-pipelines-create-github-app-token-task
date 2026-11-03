@@ -4,20 +4,27 @@ import * as constants from '../../src/utils/constants';
 describe('validation utilities', () => {
   describe('validateOwnerName', () => {
     it('should accept owner names with alphanumeric characters and single hyphens', () => {
-      expect(validateOwnerName('my-org')).toBe(true);
-      expect(validateOwnerName('user123')).toBe(true);
-      expect(validateOwnerName('enterprise-name-2')).toBe(true);
+      expect(validateOwnerName('my-org', constants.ACCOUNT_TYPE_ORG)).toBe(true);
+      expect(validateOwnerName('user123', constants.ACCOUNT_TYPE_USER)).toBe(true);
+      expect(validateOwnerName('enterprise-name-2', constants.ACCOUNT_TYPE_ENTERPRISE)).toBe(true);
     });
 
     it('should reject dots, repeated hyphens, and path or URL delimiters', () => {
-      expect(validateOwnerName('../../app/hook/deliveries?per_page=100')).toBe(false);
-      expect(validateOwnerName('org?query')).toBe(false);
-      expect(validateOwnerName('org#fragment')).toBe(false);
-      expect(validateOwnerName('org.name')).toBe(false);
-      expect(validateOwnerName('org--name')).toBe(false);
-      expect(validateOwnerName('-org')).toBe(false);
-      expect(validateOwnerName('org-')).toBe(false);
-      expect(validateOwnerName('')).toBe(false);
+      expect(validateOwnerName('../../app/hook/deliveries?per_page=100', constants.ACCOUNT_TYPE_ORG)).toBe(false);
+      expect(validateOwnerName('org?query', constants.ACCOUNT_TYPE_ORG)).toBe(false);
+      expect(validateOwnerName('org#fragment', constants.ACCOUNT_TYPE_ORG)).toBe(false);
+      expect(validateOwnerName('org.name', constants.ACCOUNT_TYPE_ORG)).toBe(false);
+      expect(validateOwnerName('org--name', constants.ACCOUNT_TYPE_ORG)).toBe(false);
+      expect(validateOwnerName('-org', constants.ACCOUNT_TYPE_ORG)).toBe(false);
+      expect(validateOwnerName('org-', constants.ACCOUNT_TYPE_ORG)).toBe(false);
+      expect(validateOwnerName('org_name', constants.ACCOUNT_TYPE_ORG)).toBe(false);
+      expect(validateOwnerName('', constants.ACCOUNT_TYPE_ORG)).toBe(false);
+    });
+
+    it('should accept Enterprise Managed User names with an underscore shortcode suffix', () => {
+      expect(validateOwnerName('mona-cat_octo', constants.ACCOUNT_TYPE_USER)).toBe(true);
+      expect(validateOwnerName('octo_admin', constants.ACCOUNT_TYPE_USER)).toBe(true);
+      expect(validateOwnerName('mona-cat_octo_name', constants.ACCOUNT_TYPE_USER)).toBe(false);
     });
   });
 

@@ -181,6 +181,18 @@ mockprivatekeydata
         expect(result).toBe(installationId);
       });
 
+      it('should get installation ID for an Enterprise Managed User', async () => {
+        const managedUser = 'mona-cat_octo';
+        nock(baseUrl)
+          .get(`/users/${managedUser}/installation`)
+          .reply(200, mockInstallationResponse);
+
+        const service = new GitHubService(baseUrl);
+        const result = await service.getInstallationId(mockJwtToken, managedUser, 'user');
+
+        expect(result).toBe(installationId);
+      });
+
       it('should handle 404 error for user installation', async () => {
         nock(baseUrl)
           .get(`/users/${owner}/installation`)
