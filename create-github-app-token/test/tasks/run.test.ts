@@ -25,8 +25,11 @@ const mockGitHubService = {
 const mockProxyConfig = {};
 
 describe('run task logic', () => {
+  const originalCertificateInput = process.env.INPUT_CERTIFICATE;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    process.env.INPUT_CERTIFICATE = 'mock-pem-key';
     
     // Reset all mocks
     MockedGitHubService.mockClear();
@@ -77,10 +80,18 @@ describe('run task logic', () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+    if (originalCertificateInput === undefined) {
+      delete process.env.INPUT_CERTIFICATE;
+    } else {
+      process.env.INPUT_CERTIFICATE = originalCertificateInput;
+    }
   });
 
   describe('successful execution scenarios', () => {
     it('should complete successfully with service connection', async () => {
+      const mockPemContent = '-----BEGIN RSA PRIVATE KEY-----\nmock-key\n-----END RSA PRIVATE KEY-----';
+      process.env.INPUT_CERTIFICATE = '';
+
       mockedTl.getInput.mockImplementation((name: string) => {
         switch (name) {
           case 'githubAppConnection':
@@ -95,7 +106,7 @@ describe('run task logic', () => {
       mockedTl.getEndpointUrl.mockReturnValue('https://api.github.com/');
       mockedTl.getEndpointAuthorization.mockReturnValue({
         parameters: {
-          'certificate': 'mock-pem-key',
+          'certificate': mockPemContent,
           'appClientId': 'test-app-id',
         }
       } as any);
@@ -103,8 +114,12 @@ describe('run task logic', () => {
       await run();
 
       expect(MockedGitHubService).toHaveBeenCalledWith('https://api.github.com', { proxy: mockProxyConfig });
-      expect(mockGitHubService.generateJWT).toHaveBeenCalledWith('test-app-id', 'mock-pem-key');
-      expect(mockedTl.setSecret).toHaveBeenCalledWith('mock-pem-key');
+      expect(mockGitHubService.generateJWT).toHaveBeenCalledWith('test-app-id', mockPemContent);
+      expect(mockedTl.setSecret.mock.calls).toEqual([
+        ['-----BEGIN RSA PRIVATE KEY-----'],
+        ['mock-key'],
+        ['-----END RSA PRIVATE KEY-----']
+      ]);
       expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'test-org', "org", []);
       expect(mockGitHubService.getInstallationToken).toHaveBeenCalledWith('mock.jwt.token', 12345, [], undefined);
       
@@ -117,14 +132,15 @@ describe('run task logic', () => {
     });
 
     it('should complete successfully with direct certificate input', async () => {
+      const mockPemContent = '-----BEGIN RSA PRIVATE KEY-----\nmock-key\n-----END RSA PRIVATE KEY-----';
+      process.env.INPUT_CERTIFICATE = mockPemContent;
+
       mockedTl.getInput.mockImplementation((name: string) => {
       switch (name) {
         case 'owner':
         return 'test-org';
         case 'appClientId':
         return 'test-app-id';
-        case 'certificate':
-        return 'mock-pem-key';
         default:
         return '';
       }
@@ -133,8 +149,16 @@ describe('run task logic', () => {
       await run();
 
       // Should generate JWT and proceed through the flow
-      expect(mockGitHubService.generateJWT).toHaveBeenCalledWith('test-app-id', 'mock-pem-key');
-      expect(mockedTl.setSecret).toHaveBeenCalledWith('mock-pem-key');
+      expect(mockGitHubService.generateJWT).toHaveBeenCalledWith('test-app-id', mockPemContent);
+      expect(mockedTl.setSecret.mock.calls).toEqual([
+        ['-----BEGIN RSA PRIVATE KEY-----'],
+        ['mock-key'],
+        ['-----END RSA PRIVATE KEY-----']
+      ]);
+      expect(mockedTl.getInput).not.toHaveBeenCalledWith('certificate', false);
+      expect(mockedTl.setSecret.mock.invocationCallOrder[0]).toBeLessThan(
+        (console.log as jest.Mock).mock.invocationCallOrder[0]
+      );
       expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'test-org', "org", []);
       expect(mockGitHubService.getInstallationToken).toHaveBeenCalledWith('mock.jwt.token', 12345, [], undefined);
 
@@ -214,6 +238,7 @@ describe('run task logic', () => {
 
     it('should complete successfully with certificate file', async () => {
       const mockPemContent = '-----BEGIN RSA PRIVATE KEY-----\nmock-key\n-----END RSA PRIVATE KEY-----';
+      process.env.INPUT_CERTIFICATE = '';
       
       mockedTl.getInput.mockImplementation((name: string) => {
       switch (name) {
@@ -235,6 +260,11 @@ describe('run task logic', () => {
 
       expect(mockedFs.readFileSync).toHaveBeenCalledWith('/path/to/cert.pem', 'utf8');
       expect(mockGitHubService.generateJWT).toHaveBeenCalledWith('test-app-id', mockPemContent);
+      expect(mockedTl.setSecret.mock.calls).toEqual([
+        ['-----BEGIN RSA PRIVATE KEY-----'],
+        ['mock-key'],
+        ['-----END RSA PRIVATE KEY-----']
+      ]);
 
       // Should proceed through the rest of the flow and set output variables
       expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'test-org', "org", []);
@@ -370,6 +400,7 @@ describe('run task logic', () => {
   describe('validation scenarios', () => {
     it('should fail when no private key is provided', async () => {
       // Set up inputs with no private key sources
+      process.env.INPUT_CERTIFICATE = '';
       mockedTl.getInput.mockImplementation((name: string) => {
         switch (name) {
           case 'owner':
@@ -455,6 +486,7 @@ describe('run task logic', () => {
 
     it('should fail when certificate file does not exist', async () => {
       const nonExistentPath = '/nonexistent/cert.pem';
+      process.env.INPUT_CERTIFICATE = '';
       
       mockedTl.getInput.mockImplementation((name: string) => {
         switch (name) {

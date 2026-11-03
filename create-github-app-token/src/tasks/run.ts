@@ -8,6 +8,9 @@ import { validateAccountType } from '../utils/validation';
 
 async function run() {
   try {
+    const privateKeyInput = process.env['INPUT_CERTIFICATE'] || '';
+    setSecretLines(privateKeyInput);
+
     let baseUrl = constants.DEFAULT_API_URL;
 
     const provider = tl.getVariable('Build.Repository.Provider');
@@ -31,10 +34,6 @@ async function run() {
 
     let appClientId = tl.getInput('appClientId', false) || undefined;
     const privateKeyPath = tl.getInput('certificateFile', false) || '';
-    const privateKeyInput = tl.getInput('certificate', false) || '';
-    if (privateKeyInput) {
-      tl.setSecret(privateKeyInput);
-    }
     let repositoriesList = tl.getInput('repositories', false)?.trim() || undefined;
     const connectedServiceName = tl.getInput('githubAppConnection', false);
     const skipTokenRevoke = tl.getBoolInput('skipTokenRevoke', false);
@@ -82,6 +81,7 @@ async function run() {
       const endpoint = tl.getEndpointAuthorization(connectedServiceName, true);
       if (endpoint) {
         privateKey = endpoint.parameters['certificate'];
+        setSecretLines(privateKey);
         appClientId = endpoint.parameters['appClientId'];
         baseUrl = tl.getEndpointUrl(connectedServiceName, true) || baseUrl;
 
@@ -159,15 +159,12 @@ async function run() {
         throw new Error(`Private key not found in the path: ${privateKeyPath}`);
       }
       privateKey = fs.readFileSync(privateKeyPath, 'utf8');
+      setSecretLines(privateKey);
     }
 
     if (!privateKey) {
       tl.setResult(tl.TaskResult.Failed, 'Private key not provided. Please configure either a GitHub App service connection, certificate input, or certificate file path.');
       return
-    }
-
-    if (privateKey !== privateKeyInput) {
-      tl.setSecret(privateKey);
     }
 
     // If repositories is define we don't really need account type
@@ -231,6 +228,10 @@ async function run() {
   }
 }
 
+function setSecretLines(secret: string) {
+  secret.split(/\r\n|\r|\n/).filter(Boolean).forEach(line => tl.setSecret(line));
+}
+
 function failIfProviderIsNotGitHub(provider: string | undefined, message: string = 'Provider is not GitHub') {
   if (provider?.toLowerCase() !== 'github') {
     tl.error(message)
@@ -245,4 +246,3 @@ if (require.main === module) {
 
 // Export for testing
 export { run };
-
