@@ -220,6 +220,18 @@ mockprivatekeydata
         expect(result).toBe(installationId);
       });
 
+      it('should accept an Enterprise Managed User owner with the default account type', async () => {
+        const managedUser = 'mona-cat_octo';
+        nock(baseUrl)
+          .get(`/repos/${managedUser}/${repo}/installation`)
+          .reply(200, mockInstallationResponse);
+
+        const service = new GitHubService(baseUrl);
+        const result = await service.getInstallationId(mockJwtToken, managedUser, 'org', [repo]);
+
+        expect(result).toBe(installationId);
+      });
+
       it('should reject invalid repository names', async () => {
         const invalidRepo = 'invalid repo name';
         const service = new GitHubService(baseUrl);

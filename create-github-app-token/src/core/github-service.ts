@@ -73,8 +73,11 @@ export class GitHubService {
         let id = 0;
 
         try {
-            if (!validateOwnerName(owner, accountType)) {
-                const format = accountType.toLowerCase() === constants.ACCOUNT_TYPE_USER
+            const ownerAccountType = repositories.length > 0
+                ? constants.ACCOUNT_TYPE_USER
+                : accountType;
+            if (!validateOwnerName(owner, ownerAccountType)) {
+                const format = ownerAccountType.toLowerCase() === constants.ACCOUNT_TYPE_USER
                     ? 'alphanumeric characters or single hyphens, optionally followed by an underscore and alphanumeric enterprise shortcode'
                     : 'alphanumeric characters or single hyphens, and cannot begin or end with a hyphen';
                 throw new Error(`Invalid owner name format: ${owner}. It must contain ${format}.`);
