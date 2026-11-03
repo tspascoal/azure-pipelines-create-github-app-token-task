@@ -3,6 +3,7 @@ import { GitHubService } from '../../src/core/github-service';
 import { ProxyConfig } from '../../src/core/proxy-config';
 import * as constants from '../../src/utils/constants';
 import { run } from '../../src/tasks/post';
+import nock from 'nock';
 
 // Mock all dependencies
 jest.mock('azure-pipelines-task-lib/task');
@@ -54,6 +55,7 @@ describe('post task logic', () => {
   });
 
   afterEach(() => {
+    nock.cleanAll();
     jest.restoreAllMocks();
   });
 
@@ -161,6 +163,30 @@ describe('post task logic', () => {
   });
 
   describe('Post Logic', () => {
+    it.each([401, 500])('should handle HTTP %i using the real revocation service', async (status) => {
+      const { GitHubService: ActualGitHubService } = jest.requireActual('../../src/core/github-service');
+      MockedGitHubService.mockImplementation((baseUrl) => new ActualGitHubService(baseUrl));
+      const scope = nock(constants.DEFAULT_API_URL)
+        .delete('/installation/token')
+        .times(status === 401 ? 1 : 3)
+        .reply(status, { message: status === 401 ? 'Bad credentials' : 'Internal Server Error' });
+
+      await run();
+
+      expect(scope.isDone()).toBe(true);
+      if (status === 401) {
+        expect(mockedTl.error).not.toHaveBeenCalled();
+        expect(mockedTl.setResult).not.toHaveBeenCalled();
+        expect(console.log).not.toHaveBeenCalledWith(expect.stringContaining('Retrying token revocation'));
+      } else {
+        expect(mockedTl.error).toHaveBeenCalledWith('Failed to revoke GitHub App installation token after 3 attempts');
+        expect(mockedTl.setResult).toHaveBeenCalledWith(
+          tl.TaskResult.Failed,
+          'Failed to revoke GitHub App installation token after 3 attempts'
+        );
+      }
+    });
+
     it('should create GitHub service with correct parameters and revoke token successfully', async () => {
       mockedTl.getTaskVariable.mockImplementation((name: string) => {
         switch (name) {
@@ -183,7 +209,7 @@ describe('post task logic', () => {
       expect(mockGitHubService.revokeInstallationToken).toHaveBeenCalledWith('ghs_mock_installation_token');
     });
 
-    it('should handle token revocation failure without failing the task', async () => {
+    it('should retry token revocation and fail the task after the final attempt', async () => {
       mockedTl.getTaskVariable.mockImplementation((name: string) => {
         switch (name) {
           case constants.SKIP_TOKEN_TASK_VARNAME:
@@ -201,8 +227,24 @@ describe('post task logic', () => {
 
       await run();
 
+      expect(mockGitHubService.revokeInstallationToken).toHaveBeenCalledTimes(3);
       expect(mockGitHubService.revokeInstallationToken).toHaveBeenCalledWith('ghs_mock_installation_token');
-      // Task should complete without throwing
+      expect(mockedTl.error).toHaveBeenCalledWith('Failed to revoke GitHub App installation token after 3 attempts');
+      expect(mockedTl.setResult).toHaveBeenCalledWith(
+        tl.TaskResult.Failed,
+        'Failed to revoke GitHub App installation token after 3 attempts'
+      );
+    });
+
+    it('should retry token revocation and stop when a retry succeeds', async () => {
+      mockGitHubService.revokeInstallationToken
+        .mockResolvedValueOnce(false)
+        .mockResolvedValueOnce(true);
+
+      await run();
+
+      expect(mockGitHubService.revokeInstallationToken).toHaveBeenCalledTimes(2);
+      expect(mockedTl.setResult).not.toHaveBeenCalled();
     });
 
     it('should handle service creation with custom base URL', async () => {
@@ -247,8 +289,12 @@ describe('post task logic', () => {
 
       await run();
 
+      expect(mockGitHubService.revokeInstallationToken).toHaveBeenCalledTimes(3);
       expect(mockGitHubService.revokeInstallationToken).toHaveBeenCalledWith('ghs_mock_installation_token');
-      expect(mockedTl.error).toHaveBeenCalledWith('Error in post-execution: Network error during revocation');
+      expect(mockedTl.setResult).toHaveBeenCalledWith(
+        tl.TaskResult.Failed,
+        'Failed to revoke GitHub App installation token after 3 attempts'
+      );
     });
   });
 

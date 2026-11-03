@@ -510,24 +510,25 @@ mockprivatekeydata
       expect(result).toBe(false);
     });
 
-    it('should handle revoke token with different HTTP status codes', async () => {
+    it('should treat an expired or already revoked token as successful cleanup', async () => {
+      nock(baseUrl)
+        .delete('/installation/token')
+        .matchHeader('Authorization', `Bearer ${installationToken}`)
+        .reply(401, { message: 'Bad credentials' });
+
       const service = new GitHubService(baseUrl);
-      
-      // Test 401 Unauthorized
+      expect(await service.revokeInstallationToken(installationToken)).toBe(true);
+      expect(nock.isDone()).toBe(true);
+    });
+
+    it.each([403, 429, 500])('should return false for HTTP %i revocation failures', async (status) => {
       nock(baseUrl)
         .delete('/installation/token')
-        .reply(401, { message: 'Unauthorized' });
+        .reply(status, { message: 'Revocation failed' });
 
-      let result = await service.revokeInstallationToken(installationToken);
-      expect(result).toBe(false);
-
-      // Test 500 Internal Server Error  
-      nock(baseUrl)
-        .delete('/installation/token')
-        .reply(500, { message: 'Internal Server Error' });
-
-      result = await service.revokeInstallationToken(installationToken);
-      expect(result).toBe(false);
+      const service = new GitHubService(baseUrl);
+      expect(await service.revokeInstallationToken(installationToken)).toBe(false);
+      expect(nock.isDone()).toBe(true);
     });
   });
 

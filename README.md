@@ -78,6 +78,8 @@ steps:
 
 *Required if githubAppConnection is not specified
 
+By default, post-job cleanup revokes the installation token. Already expired or revoked tokens (HTTP 401) count as successful cleanup. Other revocation failures are retried up to three times and fail the task if cleanup still fails.
+
 ### Output Variables
 
 | Variable | Description |

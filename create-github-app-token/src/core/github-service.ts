@@ -236,6 +236,7 @@ export class GitHubService {
         return { token, expiresAt };
     }
 
+    /** Returns true when the token is revoked or already invalid. */
     async revokeInstallationToken(token: string): Promise<boolean> {
         try {
             console.log('Revoking GitHub App installation token');
@@ -250,10 +251,14 @@ export class GitHubService {
             this.dumpHeaders(response.headers);
             return true;
         } catch (err: any) {
-            console.log(`Error revoking token: ${err.message}`);
             if (err.response) {
                 this.dumpHeaders(err.response.headers);
             }
+            if (err.response?.status === 401) {
+                console.log('GitHub App installation token is already invalid; no revocation needed');
+                return true;
+            }
+            console.log(`Error revoking token: ${err.message}`);
             return false;
         }
     }

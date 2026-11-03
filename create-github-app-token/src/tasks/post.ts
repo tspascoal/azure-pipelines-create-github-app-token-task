@@ -3,6 +3,8 @@ import { GitHubService } from '../core/github-service';
 import { ProxyConfig } from '../core/proxy-config';
 import * as constants from '../utils/constants';
 
+const MAX_REVOCATION_ATTEMPTS = 3;
+
 async function run(): Promise<void> {
   try {
     // Check if token revocation should be skipped
@@ -30,17 +32,29 @@ async function run(): Promise<void> {
     const proxyConfig = ProxyConfig.fromAzurePipelines(baseUrl);
     const githubService = new GitHubService(baseUrl, { proxy: proxyConfig });
 
-    // Revoke the token
-    const success = await githubService.revokeInstallationToken(token);
-    if (success) {
-      console.log('GitHub App installation token has been successfully revoked');
-    } else {
-      console.log('Failed to revoke GitHub App installation token');
+    for (let attempt = 1; attempt <= MAX_REVOCATION_ATTEMPTS; attempt++) {
+      try {
+        const success = await githubService.revokeInstallationToken(token);
+        if (success) {
+          console.log('GitHub App installation token cleanup completed; token revoked or already invalid');
+          return;
+        }
+      } catch (err: any) {
+        console.log(`Token revocation attempt ${attempt} failed: ${err.message}`);
+      }
+
+      if (attempt < MAX_REVOCATION_ATTEMPTS) {
+        console.log(`Retrying token revocation (${attempt + 1}/${MAX_REVOCATION_ATTEMPTS})`);
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+      }
     }
 
+    const message = `Failed to revoke GitHub App installation token after ${MAX_REVOCATION_ATTEMPTS} attempts`;
+    tl.error(message);
+    tl.setResult(tl.TaskResult.Failed, message);
   } catch (err: any) {
-    // Log errors but don't fail the task
     tl.error(`Error in post-execution: ${err.message}`);
+    tl.setResult(tl.TaskResult.Failed, `Error in post-execution: ${err.message}`);
   }
 }
 
