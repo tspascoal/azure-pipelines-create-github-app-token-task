@@ -130,6 +130,21 @@ mockprivatekeydata
     };
 
     describe('organization installation', () => {
+      it('should reject an invalid owner before making an API request', async () => {
+        const maliciousOwner = '../../app/hook/deliveries?per_page=100';
+        const scope = nock(baseUrl)
+          .get(/.*/)
+          .reply(200, mockInstallationResponse);
+
+        const service = new GitHubService(baseUrl);
+
+        await expect(
+          service.getInstallationId(mockJwtToken, maliciousOwner, 'org')
+        ).rejects.toThrow('Invalid owner name format');
+
+        expect(scope.isDone()).toBe(false);
+      });
+
       it('should get installation ID for organization', async () => {
         nock(baseUrl)
           .get(`/orgs/${owner}/installation`)
@@ -166,6 +181,18 @@ mockprivatekeydata
         expect(result).toBe(installationId);
       });
 
+      it('should get installation ID for an Enterprise Managed User', async () => {
+        const managedUser = 'mona-cat_octo';
+        nock(baseUrl)
+          .get(`/users/${managedUser}/installation`)
+          .reply(200, mockInstallationResponse);
+
+        const service = new GitHubService(baseUrl);
+        const result = await service.getInstallationId(mockJwtToken, managedUser, 'user');
+
+        expect(result).toBe(installationId);
+      });
+
       it('should handle 404 error for user installation', async () => {
         nock(baseUrl)
           .get(`/users/${owner}/installation`)
@@ -189,6 +216,18 @@ mockprivatekeydata
 
         const service = new GitHubService(baseUrl);
         const result = await service.getInstallationId(mockJwtToken, owner, "org", [repo]);
+
+        expect(result).toBe(installationId);
+      });
+
+      it('should accept an Enterprise Managed User owner with the default account type', async () => {
+        const managedUser = 'mona-cat_octo';
+        nock(baseUrl)
+          .get(`/repos/${managedUser}/${repo}/installation`)
+          .reply(200, mockInstallationResponse);
+
+        const service = new GitHubService(baseUrl);
+        const result = await service.getInstallationId(mockJwtToken, managedUser, 'org', [repo]);
 
         expect(result).toBe(installationId);
       });

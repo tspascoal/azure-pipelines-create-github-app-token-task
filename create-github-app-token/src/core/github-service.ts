@@ -2,7 +2,7 @@ import * as tl from 'azure-pipelines-task-lib/task';
 import axios, { AxiosInstance } from 'axios';
 import * as jwt from 'jsonwebtoken';
 import { ProxyConfig } from './proxy-config';
-import { validateRepositoryName } from '../utils/validation';
+import { validateOwnerName, validateRepositoryName } from '../utils/validation';
 import { normalizeGitHubApiUrl } from '../utils/github';
 import * as constants from '../utils/constants';
 import { VERSION, USER_AGENT } from '../utils/version';
@@ -73,6 +73,16 @@ export class GitHubService {
         let id = 0;
 
         try {
+            const ownerAccountType = repositories.length > 0
+                ? constants.ACCOUNT_TYPE_USER
+                : accountType;
+            if (!validateOwnerName(owner, ownerAccountType)) {
+                const format = ownerAccountType.toLowerCase() === constants.ACCOUNT_TYPE_USER
+                    ? 'alphanumeric characters or single hyphens, optionally followed by an underscore and alphanumeric enterprise shortcode'
+                    : 'alphanumeric characters or single hyphens, and cannot begin or end with a hyphen';
+                throw new Error(`Invalid owner name format: ${owner}. It must contain ${format}.`);
+            }
+
             if (repositories.length > 0) {
                 const repo = repositories[0];
                 groupName = `##[group]Get Installation ID for repository ${owner}/${repo}`;
