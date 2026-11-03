@@ -130,6 +130,21 @@ mockprivatekeydata
     };
 
     describe('organization installation', () => {
+      it('should reject an invalid owner before making an API request', async () => {
+        const maliciousOwner = '../../app/hook/deliveries?per_page=100';
+        const scope = nock(baseUrl)
+          .get(/.*/)
+          .reply(200, mockInstallationResponse);
+
+        const service = new GitHubService(baseUrl);
+
+        await expect(
+          service.getInstallationId(mockJwtToken, maliciousOwner, 'org')
+        ).rejects.toThrow('Invalid owner name format');
+
+        expect(scope.isDone()).toBe(false);
+      });
+
       it('should get installation ID for organization', async () => {
         nock(baseUrl)
           .get(`/orgs/${owner}/installation`)

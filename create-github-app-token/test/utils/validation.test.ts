@@ -1,7 +1,26 @@
-import { validateRepositoryName, validateAccountType } from '../../src/utils/validation';
+import { validateOwnerName, validateRepositoryName, validateAccountType } from '../../src/utils/validation';
 import * as constants from '../../src/utils/constants';
 
 describe('validation utilities', () => {
+  describe('validateOwnerName', () => {
+    it('should accept owner names with alphanumeric characters and single hyphens', () => {
+      expect(validateOwnerName('my-org')).toBe(true);
+      expect(validateOwnerName('user123')).toBe(true);
+      expect(validateOwnerName('enterprise-name-2')).toBe(true);
+    });
+
+    it('should reject dots, repeated hyphens, and path or URL delimiters', () => {
+      expect(validateOwnerName('../../app/hook/deliveries?per_page=100')).toBe(false);
+      expect(validateOwnerName('org?query')).toBe(false);
+      expect(validateOwnerName('org#fragment')).toBe(false);
+      expect(validateOwnerName('org.name')).toBe(false);
+      expect(validateOwnerName('org--name')).toBe(false);
+      expect(validateOwnerName('-org')).toBe(false);
+      expect(validateOwnerName('org-')).toBe(false);
+      expect(validateOwnerName('')).toBe(false);
+    });
+  });
+
   describe('validateRepositoryName', () => {
     it('should accept valid repository names with letters and numbers', () => {
       expect(validateRepositoryName('myrepo123')).toBe(true);
@@ -111,4 +130,3 @@ describe('validation utilities', () => {
   });
 });
   
-

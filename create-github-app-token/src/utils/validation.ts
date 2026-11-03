@@ -5,6 +5,11 @@ export function validateRepositoryName(repo: string): boolean {
     return repoNameRegex.test(repo);
 }
 
+export function validateOwnerName(owner: string): boolean {
+    const ownerNameRegex = /^[a-zA-Z0-9]+(?:-[a-zA-Z0-9]+)*$/;
+    return ownerNameRegex.test(owner);
+}
+
 export function validateAccountType(accountType: string) {
     const validAccountTypes = [constants.ACCOUNT_TYPE_ORG, constants.ACCOUNT_TYPE_USER, constants.ACCOUNT_TYPE_ENTERPRISE];
     if(!validAccountTypes.includes(accountType)) {
