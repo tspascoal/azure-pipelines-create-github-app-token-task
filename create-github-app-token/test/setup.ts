@@ -15,6 +15,7 @@ jest.mock('azure-pipelines-task-lib/task', () => ({
   getInput: jest.fn(),
   getBoolInput: jest.fn(),
   getVariable: jest.fn(),
+  setSecret: jest.fn(),
   setVariable: jest.fn(),
   setTaskVariable: jest.fn(),
   getTaskVariable: jest.fn(),
