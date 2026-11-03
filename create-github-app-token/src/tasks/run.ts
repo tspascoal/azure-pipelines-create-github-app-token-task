@@ -32,6 +32,9 @@ async function run() {
     let appClientId = tl.getInput('appClientId', false) || undefined;
     const privateKeyPath = tl.getInput('certificateFile', false) || '';
     const privateKeyInput = tl.getInput('certificate', false) || '';
+    if (privateKeyInput) {
+      tl.setSecret(privateKeyInput);
+    }
     let repositoriesList = tl.getInput('repositories', false)?.trim() || undefined;
     const connectedServiceName = tl.getInput('githubAppConnection', false);
     const skipTokenRevoke = tl.getBoolInput('skipTokenRevoke', false);
@@ -163,6 +166,10 @@ async function run() {
       return
     }
 
+    if (privateKey !== privateKeyInput) {
+      tl.setSecret(privateKey);
+    }
+
     // If repositories is define we don't really need account type
     if (!repositoriesList) {
       validateAccountType(accountType);
@@ -238,5 +245,4 @@ if (require.main === module) {
 
 // Export for testing
 export { run };
-
 

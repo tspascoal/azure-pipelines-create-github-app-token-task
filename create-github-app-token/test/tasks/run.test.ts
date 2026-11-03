@@ -133,6 +133,7 @@ describe('run task logic', () => {
 
       // Should generate JWT and proceed through the flow
       expect(mockGitHubService.generateJWT).toHaveBeenCalledWith('test-app-id', 'mock-pem-key');
+      expect(mockedTl.setSecret).toHaveBeenCalledWith('mock-pem-key');
       expect(mockGitHubService.getInstallationId).toHaveBeenCalledWith('mock.jwt.token', 'test-org', "org", []);
       expect(mockGitHubService.getInstallationToken).toHaveBeenCalledWith('mock.jwt.token', 12345, [], undefined);
 
