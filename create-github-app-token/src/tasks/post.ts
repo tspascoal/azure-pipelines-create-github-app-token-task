@@ -36,7 +36,7 @@ async function run(): Promise<void> {
       try {
         const success = await githubService.revokeInstallationToken(token);
         if (success) {
-          console.log('GitHub App installation token has been successfully revoked');
+          console.log('GitHub App installation token cleanup completed; token revoked or already invalid');
           return;
         }
       } catch (err: any) {
