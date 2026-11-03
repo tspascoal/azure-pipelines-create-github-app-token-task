@@ -183,7 +183,7 @@ describe('post task logic', () => {
       expect(mockGitHubService.revokeInstallationToken).toHaveBeenCalledWith('ghs_mock_installation_token');
     });
 
-    it('should handle token revocation failure without failing the task', async () => {
+    it('should retry token revocation and fail the task after the final attempt', async () => {
       mockedTl.getTaskVariable.mockImplementation((name: string) => {
         switch (name) {
           case constants.SKIP_TOKEN_TASK_VARNAME:
@@ -201,8 +201,24 @@ describe('post task logic', () => {
 
       await run();
 
+      expect(mockGitHubService.revokeInstallationToken).toHaveBeenCalledTimes(3);
       expect(mockGitHubService.revokeInstallationToken).toHaveBeenCalledWith('ghs_mock_installation_token');
-      // Task should complete without throwing
+      expect(mockedTl.error).toHaveBeenCalledWith('Failed to revoke GitHub App installation token after 3 attempts');
+      expect(mockedTl.setResult).toHaveBeenCalledWith(
+        tl.TaskResult.Failed,
+        'Failed to revoke GitHub App installation token after 3 attempts'
+      );
+    });
+
+    it('should retry token revocation and stop when a retry succeeds', async () => {
+      mockGitHubService.revokeInstallationToken
+        .mockResolvedValueOnce(false)
+        .mockResolvedValueOnce(true);
+
+      await run();
+
+      expect(mockGitHubService.revokeInstallationToken).toHaveBeenCalledTimes(2);
+      expect(mockedTl.setResult).not.toHaveBeenCalled();
     });
 
     it('should handle service creation with custom base URL', async () => {
@@ -247,8 +263,12 @@ describe('post task logic', () => {
 
       await run();
 
+      expect(mockGitHubService.revokeInstallationToken).toHaveBeenCalledTimes(3);
       expect(mockGitHubService.revokeInstallationToken).toHaveBeenCalledWith('ghs_mock_installation_token');
-      expect(mockedTl.error).toHaveBeenCalledWith('Error in post-execution: Network error during revocation');
+      expect(mockedTl.setResult).toHaveBeenCalledWith(
+        tl.TaskResult.Failed,
+        'Failed to revoke GitHub App installation token after 3 attempts'
+      );
     });
   });
 
