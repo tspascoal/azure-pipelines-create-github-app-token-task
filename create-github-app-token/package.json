@@ -29,8 +29,8 @@
     "jest": "^30.5.2",
     "jest-environment-node": "^30.4.1",
     "jest-junit": "^17.0.0",
-    "nock": "^14.0.17",
+    "nock": "^15.0.5",
     "ts-jest": "^29.4.15",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   }
 }
